@@ -4,8 +4,20 @@ Small-shop billing that runs entirely in the browser — no server, no database.
 Products come from an Excel sheet; the cashier will speak a product name, the app shows
 its price, and a bill is printed on a 58mm thermal printer. Android Chrome is the target.
 
-**Status:** step 3 of 5 — load `products.xlsx`; bill by typing or by voice; print a receipt.
-Bills list + Excel export (4) and deployment (5) are still to come.
+**Status:** step 4 of 5 — load `products.xlsx`; bill by typing or by voice; print a receipt; list and export bills.
+Deployment to the phone (5) is still to come.
+
+## Bills and backup (step 4)
+
+- **Bills** tab: pick a **From / To** date range (default today; an empty box means no limit). Bills are
+  grouped by day, newest first, with each day's count and total and one overall total at the top.
+- **Export to Excel** downloads `bills-YYYY-MM-DD.xlsx` (or `bills-FROM_to_TO.xlsx`). Sheet **Bills** has
+  exactly `date · bill_no · total`; sheet **Daily totals** has per-day counts and totals and a grand total.
+- Bills live only in this browser's storage, so **clearing Chrome's site data deletes them**. Any earlier
+  day with bills not yet exported shows a warning, an orange dot on the Bills tab, and an **Export them**
+  button. Today never nags. "Exported" means the file was handed to the browser's downloads — the app
+  cannot see whether the download was kept, so check the Downloads folder.
+- Bill numbers keep a separate counter per day, so a phone clock that jumps back cannot reuse a number.
 
 ## Voice (step 3)
 
@@ -66,9 +78,9 @@ First sheet of the workbook, header in row 1:
 ## Tests
 
 ```
-node test/catalog.test.js && node test/bill.test.js && node test/voice.test.js   # rows, bill math, search, parser, matcher
+node test/catalog.test.js && node test/bill.test.js && node test/voice.test.js && node test/export.test.js
 python -m http.server 8000 &                                # then, with playwright installed:
-node test/e2e.js && node test/e2e-billing.js && node test/e2e-voice.js          # headless Chrome (voice uses a fake speech engine)
+node test/e2e.js && node test/e2e-billing.js && node test/e2e-voice.js && node test/e2e-bills.js   # headless Chrome (voice uses a fake speech engine)
 ```
 
 `vendor/` holds SheetJS 0.18.5 and Fuse.js 6.6.2 (both Apache-2.0), vendored so the app works offline.

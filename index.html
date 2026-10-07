@@ -35,7 +35,20 @@
     </section>
 
     <section id="screen-bills" hidden>
-      <p class="placeholder">Bills list and Excel export — coming in step 4.</p>
+      <div id="bills-warn" class="status warn warnrow" role="alert" hidden>
+        <span id="bills-warn-text"></span>
+        <button id="bills-warn-go" class="secondary" type="button">Export them</button>
+      </div>
+      <div class="range">
+        <label>From <input id="bills-from" type="date"></label>
+        <label>To <input id="bills-to" type="date"></label>
+        <button id="bills-today" class="secondary" type="button">Today</button>
+      </div>
+      <p id="bills-summary" class="summary big"></p>
+      <button id="bills-export" class="primary wide" type="button" disabled>Export to Excel</button>
+      <p id="bills-status" class="status" role="status" hidden></p>
+      <p id="bills-empty" class="placeholder">No bills in this period.</p>
+      <div id="bills-list"></div>
     </section>
 
     <section id="screen-products" hidden>
@@ -72,7 +85,7 @@
 
   <nav class="tabs" role="tablist">
     <button id="tab-billing" role="tab" type="button">Billing</button>
-    <button id="tab-bills" role="tab" type="button">Bills</button>
+    <button id="tab-bills" role="tab" type="button">Bills<span id="bills-dot" class="dot" title="Some days are not backed up" hidden></span></button>
     <button id="tab-products" role="tab" type="button">Products</button>
   </nav>
 
@@ -86,6 +99,8 @@
   <script src="js/voice.js"></script>
   <script src="js/store.js"></script>
   <script src="js/billing.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/bills.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

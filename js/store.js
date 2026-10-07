@@ -60,13 +60,19 @@
       return new Promise(function (resolve, reject) {
         var tx = db.transaction(['bills', 'meta'], 'readwrite');
         var meta = tx.objectStore('meta'), out;
-        var get = meta.get('counter');
+        // One counter per day, so a phone clock that jumps back a day cannot reuse a number.
+        var get = meta.get('counter:' + date);
         get.onsuccess = function () {
-          var c = get.result, n = c && c.date === date ? c.n + 1 : 1;
+          if (get.result) return issue(get.result.n);
+          var legacy = meta.get('counter');            // single counter written by earlier versions
+          legacy.onsuccess = function () { issue(legacy.result && legacy.result.date === date ? legacy.result.n : 0); };
+        };
+        function issue(last) {
+          var n = last + 1;
           out = { billNo: Bill.billNo(date, n), date: date, total: total };
           tx.objectStore('bills').add(out);
-          meta.put({ key: 'counter', date: date, n: n });
-        };
+          meta.put({ key: 'counter:' + date, n: n });
+        }
         tx.oncomplete = function () { db.close(); resolve(out); };
         tx.onerror = tx.onabort = function () { db.close(); reject(tx.error || new Error('Storage failed')); };
       });
@@ -101,6 +107,30 @@
     });
   }
 
+  // { 'YYYY-MM-DD': how many of that day's bills the last export contained }
+  function getExported() {
+    return open().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('meta', 'readonly'), r = tx.objectStore('meta').get('exported');
+        tx.oncomplete = function () { db.close(); resolve(r.result ? r.result.days : {}); };
+        tx.onerror = function () { db.close(); reject(tx.error); };
+      });
+    });
+  }
+
+  function markExported(days) {   // days: [{date, count}] merged into what is already recorded
+    return open().then(function (db) {
+      var tx = db.transaction('meta', 'readwrite'), meta = tx.objectStore('meta'), get = meta.get('exported');
+      get.onsuccess = function () {
+        var all = get.result ? get.result.days : {};
+        days.forEach(function (d) { all[d.date] = d.count; });
+        meta.put({ key: 'exported', days: all });
+      };
+      return done(tx).then(function () { db.close(); });
+    });
+  }
+
   root.Store = { saveProducts: saveProducts, loadProducts: loadProducts, saveBill: saveBill, loadBills: loadBills,
+                 getExported: getExported, markExported: markExported,
                  getShop: getShop, setShop: setShop };
 })(window);

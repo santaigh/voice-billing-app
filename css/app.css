@@ -106,3 +106,21 @@ button.primary:disabled { background: #9db3a8; }
 .heard { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--card); }
 .heard.live { color: var(--muted); } .heard.ok { background: var(--ok-bg); } .heard.warn { background: var(--warn-bg); } .heard.bad { background: var(--bad-bg); color: var(--bad); }
 .result.more { justify-content: center; min-height: 48px; color: var(--green); font-weight: 600; }
+
+/* ---- bills ---- */
+.range { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+.range label { display: grid; gap: 2px; font-size: .85rem; color: var(--muted); }
+.range input[type="date"] { font: inherit; min-height: 48px; padding: 0 8px; border: 1px solid #b9c2bc; border-radius: 8px; background: #fff; color: var(--ink); }
+.summary.big { font-size: 1.25rem; font-weight: 700; color: var(--ink); margin: 12px 0 8px; }
+button.wide { width: 100%; }
+.warnrow { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.warnrow .secondary { flex: none; }
+.dot { display: inline-block; width: 9px; height: 9px; margin-left: 4px; border-radius: 50%; background: #d9822b; vertical-align: top; }
+.day { background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-top: 10px; overflow: hidden; }
+.day-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; padding: 10px 12px; background: #eef1ee; }
+.day-sum { color: var(--muted); font-variant-numeric: tabular-nums; }
+.badge { margin-left: auto; font-size: .8rem; padding: 2px 8px; border-radius: 10px; background: #e3e7e4; color: var(--muted); }
+.badge.ok { background: var(--ok-bg); color: var(--green-dark); } .badge.warn { background: var(--warn-bg); color: #8a5a00; }
+.bill-rows { list-style: none; margin: 0; padding: 0; }
+.bill-rows li { display: flex; justify-content: space-between; padding: 10px 12px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.bill-rows .bn { color: var(--muted); } .bill-rows .bt { font-weight: 600; }

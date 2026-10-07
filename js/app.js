@@ -19,6 +19,7 @@
       b.setAttribute('aria-selected', t === name ? 'true' : 'false');
     });
     document.body.classList.toggle('billing-tab', name === 'billing');
+    if (name === 'bills' && window.Bills) Bills.refresh();
     try { sessionStorage.setItem('tab', name); } catch (e) { /* private mode: fine */ }
   }
 
@@ -99,6 +100,7 @@
     showTab(start);
 
     Billing.init();
+    Bills.init();
     $('shop-name').addEventListener('change', function () {
       var name = $('shop-name').value.trim();
       Billing.setShop(name);
