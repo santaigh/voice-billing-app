@@ -14,7 +14,17 @@
 
   <main>
     <section id="screen-billing" hidden>
-      <p class="placeholder">Billing screen — coming in step 2.</p>
+      <p id="bill-noproducts" class="placeholder">No products yet. Go to <b>Products</b> and load your sheet first.</p>
+      <input id="bill-search" type="search" placeholder="Type a product name…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search products">
+      <ul id="bill-results" class="results" hidden></ul>
+      <p id="bill-nomatch" class="placeholder" hidden>No product matches that.</p>
+      <p id="bill-empty" class="placeholder">Search for a product and tap it to add it to the bill.</p>
+      <ul id="bill-cart" class="cart"></ul>
+      <p id="bill-msg" class="status" role="alert" hidden></p>
+      <div class="billbar">
+        <div class="bb-total"><span>Total ₹</span><strong id="bill-total">0.00</strong></div>
+        <button id="bill-generate" class="primary" type="button" disabled>Generate Bill</button>
+      </div>
     </section>
 
     <section id="screen-bills" hidden>
@@ -33,12 +43,25 @@
         Tap <b>Load products.xlsx</b> and pick your sheet.<br>
         Columns: <code>code · name_en · name_ta · unit · price · aliases</code>
       </p>
+      <div class="shop">
+        <label for="shop-name">Shop name <small>(printed at the top of each bill)</small></label>
+        <input id="shop-name" type="text" maxlength="40" autocomplete="off">
+        <small id="shop-saved" hidden>Saved</small>
+      </div>
       <table id="prod-table" hidden>
         <thead><tr><th>Product</th><th>Unit</th><th class="price">Price ₹</th></tr></thead>
         <tbody id="prod-body"></tbody>
       </table>
     </section>
   </main>
+
+  <div id="receipt-overlay" hidden>
+    <div class="receipt-actions">
+      <button id="receipt-print" class="primary" type="button">Print again</button>
+      <button id="receipt-new" class="secondary" type="button">New bill</button>
+    </div>
+    <div id="receipt-paper" class="paper"></div>
+  </div>
 
   <nav class="tabs" role="tablist">
     <button id="tab-billing" role="tab" type="button">Billing</button>
@@ -48,7 +71,10 @@
 
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="js/catalog.js"></script>
+  <script src="js/bill.js"></script>
+  <script src="js/search.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/billing.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

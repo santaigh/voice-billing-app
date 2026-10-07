@@ -4,8 +4,22 @@ Small-shop billing that runs entirely in the browser — no server, no database.
 Products come from an Excel sheet; the cashier will speak a product name, the app shows
 its price, and a bill is printed on a 58mm thermal printer. Android Chrome is the target.
 
-**Status:** step 1 of 5 — load `products.xlsx`, check every row, keep it on the device.
-Billing (2), voice (3), bills list + Excel export (4) and deployment (5) are still to come.
+**Status:** step 2 of 5 — load `products.xlsx`; bill by typing; print a receipt.
+Voice (3), bills list + Excel export (4) and deployment (5) are still to come.
+
+## Billing (step 2)
+
+- **Billing** tab: type part of a product's name, Tamil name, code or alias, tap a result (or press Enter
+  for the top one). Adding the same product again adds one to its quantity.
+- Quantity and price are editable per line. KG and LTR items accept decimals (0.25); everything else
+  needs whole numbers. A bad value is highlighted and **Generate Bill** stays disabled until it is fixed.
+- **Generate Bill** saves `{billNo, date, total}` on the device, shows the receipt and opens the print dialog.
+  Bill numbers are `YYYYMMDD-001` and restart each day. The number and the saved bill are written in one
+  transaction. If saving fails nothing is printed and the cart is kept.
+- Line items are **not** stored — only date, bill number and total. Totals are exact (computed in paise).
+- The shop name printed on receipts is set on the **Products** tab.
+- The receipt shows English product names. It is laid out for a 58mm roll and fills the paper width the
+  printer driver provides.
 
 ## Run it
 
@@ -35,8 +49,9 @@ First sheet of the workbook, header in row 1:
 ## Tests
 
 ```
-node test/catalog.test.js                                   # row checks
-python -m http.server 8000 &  node test/e2e.js              # headless Chrome (needs playwright)
+node test/catalog.test.js && node test/bill.test.js         # row checks, bill math, search
+python -m http.server 8000 &                                # then, with playwright installed:
+node test/e2e.js && node test/e2e-billing.js                # headless Chrome
 ```
 
 `vendor/xlsx.full.min.js` is SheetJS 0.18.5 (Apache-2.0), vendored so the app works offline.

@@ -1,4 +1,4 @@
-/* Screens: tab switching and the Products screen. */
+/* Tab switching, the Products screen and the shop-name setting. */
 (function () {
   'use strict';
 
@@ -18,6 +18,7 @@
       var b = $('tab-' + t);
       b.setAttribute('aria-selected', t === name ? 'true' : 'false');
     });
+    document.body.classList.toggle('billing-tab', name === 'billing');
     try { sessionStorage.setItem('tab', name); } catch (e) { /* private mode: fine */ }
   }
 
@@ -76,6 +77,7 @@
       var info = { fileName: file.name, loadedAt: Date.now() };
       return Store.saveProducts(result.products, info).then(function () {
         renderProducts(result.products, info);
+        Billing.setProducts(result.products);
         status('Loaded ' + result.products.length + (result.products.length === 1 ? ' product' : ' products') +
           (result.errors.length ? ', skipped ' + result.errors.length + '.' : '.'), result.errors.length ? 'warn' : 'ok');
       });
@@ -96,7 +98,15 @@
     try { start = sessionStorage.getItem('tab') || start; } catch (e) { /* ignore */ }
     showTab(start);
 
-    Store.loadProducts().then(function (r) { renderProducts(r.products, r.info); })
+    Billing.init();
+    $('shop-name').addEventListener('change', function () {
+      var name = $('shop-name').value.trim();
+      Billing.setShop(name);
+      Store.setShop(name).then(function () { $('shop-saved').hidden = false; setTimeout(function () { $('shop-saved').hidden = true; }, 1500); });
+    });
+    Store.getShop().then(function (name) { $('shop-name').value = name; Billing.setShop(name); });
+
+    Store.loadProducts().then(function (r) { renderProducts(r.products, r.info); Billing.setProducts(r.products); })
       .catch(function () { status('Could not open the on-device storage. Products will not be remembered.', 'bad'); });
 
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

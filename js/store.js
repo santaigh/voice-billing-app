@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
 
-  var DB_NAME = 'voice-billing', DB_VERSION = 1;
+  var DB_NAME = 'voice-billing', DB_VERSION = 2;
 
   function open() {
     return new Promise(function (resolve, reject) {
@@ -11,6 +11,7 @@
         var db = req.result;
         if (!db.objectStoreNames.contains('products')) db.createObjectStore('products', { keyPath: 'code' });
         if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('bills')) db.createObjectStore('bills', { keyPath: 'billNo' });
       };
       req.onsuccess = function () { resolve(req.result); };
       req.onerror = function () { reject(req.error); };
@@ -51,5 +52,55 @@
     });
   }
 
-  root.Store = { saveProducts: saveProducts, loadProducts: loadProducts };
+  // Issues the next bill number and saves {billNo, date, total} in ONE transaction, so a bill
+  // can never exist without its number being used up, and two bills can never share a number.
+  function saveBill(total, now) {
+    var date = Bill.localDate(now);
+    return open().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(['bills', 'meta'], 'readwrite');
+        var meta = tx.objectStore('meta'), out;
+        var get = meta.get('counter');
+        get.onsuccess = function () {
+          var c = get.result, n = c && c.date === date ? c.n + 1 : 1;
+          out = { billNo: Bill.billNo(date, n), date: date, total: total };
+          tx.objectStore('bills').add(out);
+          meta.put({ key: 'counter', date: date, n: n });
+        };
+        tx.oncomplete = function () { db.close(); resolve(out); };
+        tx.onerror = tx.onabort = function () { db.close(); reject(tx.error || new Error('Storage failed')); };
+      });
+    });
+  }
+
+  function loadBills() {
+    return open().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('bills', 'readonly'), all = tx.objectStore('bills').getAll();
+        tx.oncomplete = function () { db.close(); resolve(all.result); };
+        tx.onerror = function () { db.close(); reject(tx.error); };
+      });
+    });
+  }
+
+  function getShop() {
+    return open().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('meta', 'readonly'), r = tx.objectStore('meta').get('shop');
+        tx.oncomplete = function () { db.close(); resolve(r.result ? r.result.name : ''); };
+        tx.onerror = function () { db.close(); reject(tx.error); };
+      });
+    });
+  }
+
+  function setShop(name) {
+    return open().then(function (db) {
+      var tx = db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').put({ key: 'shop', name: name });
+      return done(tx).then(function () { db.close(); });
+    });
+  }
+
+  root.Store = { saveProducts: saveProducts, loadProducts: loadProducts, saveBill: saveBill, loadBills: loadBills,
+                 getShop: getShop, setShop: setShop };
 })(window);

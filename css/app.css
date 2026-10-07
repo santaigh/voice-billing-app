@@ -35,3 +35,59 @@ th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--li
 th { background: #eef1ee; font-size: .85rem; color: var(--muted); }
 td.unit { color: var(--muted); font-size: .9rem; } th.price, td.price { text-align: right; font-variant-numeric: tabular-nums; }
 td.name .ta { color: var(--muted); font-size: .9rem; }
+
+/* ---- billing ---- */
+body.billing-tab { padding-bottom: 140px; }
+button.secondary { min-height: 48px; padding: 0 20px; border: 2px solid var(--green); border-radius: 8px; background: var(--card); color: var(--green); font: inherit; font-weight: 600; }
+input[type="search"], input[type="text"], .l-qty, .l-price {
+  font: inherit; min-height: 48px; padding: 0 12px; border: 1px solid #b9c2bc; border-radius: 8px; background: #fff; color: var(--ink);
+}
+input[type="search"] { width: 100%; font-size: 1.1rem; }
+input:disabled { background: #eceeec; }
+.results { list-style: none; margin: 6px 0 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.result { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; text-align: left; color: inherit; }
+.results li:last-child .result { border-bottom: 0; }
+.result:active { background: var(--ok-bg); }
+.r-left { display: flex; flex-direction: column; min-width: 0; }
+.r-ta { color: var(--muted); font-size: .9rem; }
+.r-price { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--green-dark); font-weight: 600; }
+
+.cart { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.line { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.l-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.l-remove { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.1rem; color: var(--bad); }
+.l-row { display: flex; align-items: center; gap: 6px; }
+.l-qty { width: 76px; text-align: right; }
+.l-price { width: 92px; text-align: right; }
+.l-unit, .l-x, .l-rs { color: var(--muted); }
+.l-total { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+input.invalid { border-color: var(--bad); background: var(--bad-bg); }
+
+.billbar { position: fixed; left: 0; right: 0; bottom: 56px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--card); border-top: 1px solid var(--line); }
+.bb-total { display: flex; flex-direction: column; line-height: 1.1; color: var(--muted); font-size: .85rem; }
+.bb-total strong { font-size: 1.6rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.billbar .primary { min-width: 160px; min-height: 52px; }
+button.primary:disabled { background: #9db3a8; }
+
+.shop { margin: 12px 0; display: grid; gap: 4px; }
+.shop small { color: var(--muted); }
+
+/* ---- receipt: preview on screen, 58mm on paper ---- */
+#receipt-overlay { position: fixed; inset: 0; z-index: 10; background: var(--bg); overflow: auto; padding: 16px; }
+.receipt-actions { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+.paper { width: 58mm; margin: 0 auto; padding: 4mm 5mm; background: #fff; color: #000; font-size: 12px; line-height: 1.35; box-shadow: 0 1px 6px rgba(0,0,0,.2); }
+.paper hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+.r-shop { text-align: center; font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.r-meta { text-align: center; }
+.r-name { font-weight: 600; margin-top: 4px; }
+.r-calc, .r-total { display: flex; justify-content: space-between; gap: 6px; font-variant-numeric: tabular-nums; }
+.r-total { font-weight: 700; font-size: 15px; }
+.r-thanks { text-align: center; }
+
+@page { size: 58mm auto; margin: 0; }
+@media print {
+  body.receipt-open > *:not(#receipt-overlay) { display: none !important; }
+  #receipt-overlay { position: static; padding: 0; background: #fff; overflow: visible; }
+  .receipt-actions { display: none; }
+  .paper { box-shadow: none; margin: 0; width: auto; }   /* fill whatever width the printer's paper gives */
+}
