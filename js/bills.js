@@ -13,7 +13,7 @@
   var niceDate = Bill.displayDate;     // every date on screen reads DD-MM-YYYY
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
-  var all = [], exported = {}, shown = [];
+  var all = [], exported = {}, shown = [], paintedKey = '';
 
   // The chosen range, from the two text boxes (DD-MM-YYYY). A blank box means "no limit" on that side;
   // reversed boxes are simply swapped. Returns null while a box holds something that is not a real date.
@@ -46,12 +46,23 @@
 
   function paint() {
     shown = selected();
+    // Redraw only when something on screen would change. Otherwise a tap is lost: leaving a date box (which
+    // fires 'change') would rebuild the list under the finger and swallow the tap on View / Print.
+    var key = (range() || ['', '']).join('>') + '|' + Bill.localDate(new Date()) + '|' + JSON.stringify(exported) + '|' +
+      shown.map(function (b) { return b.billNo + ':' + b.total + ':' + (b.items ? b.items.length : 0); }).join(',');
+    if (key === paintedKey) return;
+    paintedKey = key;
     var days = Export.dayTotals(shown), today = Bill.localDate(new Date());
     var sum = days.reduce(function (s, d) { return s + d.paise; }, 0);
 
-    $('bills-summary').textContent = shown.length
-      ? plural(shown.length, 'bill') + ' · ₹ ' + Bill.formatMoney(sum)
-      : '';
+    // "07-10-2026 - 3 bills · ₹ 1,604.00" for one day, "04-10-2026 - 07-10-2026 - 3 bills · ₹ 1,604.00" for a range
+    var r = range() || ['', ''];
+    var span = '';
+    if (shown.length) {
+      var from = r[0] || days[0].date, to = r[1] || days[days.length - 1].date;
+      span = (from === to ? niceDate(to) : niceDate(from) + ' - ' + niceDate(to)) + ' - ';
+    }
+    $('bills-summary').textContent = shown.length ? span + plural(shown.length, 'bill') + ' · ₹ ' + Bill.formatMoney(sum) : '';
     $('bills-empty').hidden = shown.length > 0;
     $('bills-export').disabled = shown.length === 0;
     $('bills-export').textContent = shown.length ? 'Export to Excel (' + plural(shown.length, 'bill') + ')' : 'Export to Excel';
@@ -66,14 +77,31 @@
       var badge = el('span', 'badge ' + (done ? 'ok' : d.date < today ? 'warn' : ''), done ? '✓ exported' : d.date < today ? 'not exported' : 'today');
       head.appendChild(badge);
       sec.appendChild(head);
-      var ul = el('ul', 'bill-rows');
-      shown.filter(function (b) { return b.date === d.date; }).reverse().forEach(function (b) {
-        var li = el('li');
-        li.appendChild(el('span', 'bn', b.billNo));
-        li.appendChild(el('span', 'bt', Bill.formatMoney(Math.round(b.total * 100))));
-        ul.appendChild(li);
+
+      // SNo | Bill No | Grand Total | Ops (View, Print); newest bill first
+      var table = el('table', 'billrows'), hr = el('tr');
+      [['c-sno', 'SNo'], ['c-bn', 'Bill No'], ['c-gt', 'Grand Total'], ['c-ops', 'Ops']].forEach(function (c) { hr.appendChild(el('th', c[0], c[1])); });
+      table.appendChild(el('thead')).appendChild(hr);
+      var tbody = el('tbody');
+      shown.filter(function (b) { return b.date === d.date; }).reverse().forEach(function (b, i) {
+        var tr = el('tr'), label = Bill.label(b), hasItems = !!(b.items && b.items.length);
+        tr.appendChild(el('td', 'c-sno', String(i + 1)));
+        tr.appendChild(el('td', 'c-bn', label));
+        tr.appendChild(el('td', 'c-gt', Bill.formatMoney(Math.round(b.total * 100))));
+        var ops = el('td', 'c-ops');
+        var view = el('button', 'op op-view', 'View');
+        view.type = 'button'; view.setAttribute('aria-label', 'View bill ' + label);
+        view.addEventListener('click', function () { openView(b); });
+        var print = el('button', 'op op-print', 'Print');
+        print.type = 'button'; print.setAttribute('aria-label', 'Print bill ' + label);
+        if (hasItems) print.addEventListener('click', function () { Billing.printBill(b); });
+        else { print.disabled = true; print.title = 'The items of this older bill were not saved, so it cannot be reprinted.'; }
+        ops.appendChild(view); ops.appendChild(print);
+        tr.appendChild(ops);
+        tbody.appendChild(tr);
       });
-      sec.appendChild(ul);
+      table.appendChild(tbody);
+      sec.appendChild(table);
       list.appendChild(sec);
     });
 
@@ -152,9 +180,39 @@
     native.addEventListener('change', function () { box.value = Bill.displayDate(native.value); boxChanged(box, true); });
   }
 
+  // ---- View: the bill as a read-only table, same layout as the billing screen ----
+  var viewing = null;
+
+  function openView(b) {
+    viewing = b;
+    var items = b.items || [];
+    $('view-title').textContent = 'Bill ' + Bill.label(b);
+    $('view-sub').textContent = niceDate(b.date) + (b.time ? ' ' + b.time : '');
+    var body = $('view-body');
+    body.textContent = '';
+    items.forEach(function (it, i) {
+      var tr = el('tr');
+      tr.appendChild(el('td', 'c-sno', String(i + 1)));
+      tr.appendChild(el('td', 'c-amt', Bill.formatMoney(Math.round(it.price * 100))));
+      tr.appendChild(el('td', 'c-name', it.name_ta ? it.name_en + ' - ' + it.name_ta : it.name_en));
+      tr.appendChild(el('td', 'c-qty', Bill.formatQty(it.qty) + ' ' + Bill.unitLabel(it.unit)));
+      tr.appendChild(el('td', 'c-total', Bill.formatMoney(Math.round(it.amount * 100))));
+      body.appendChild(tr);
+    });
+    $('view-total').textContent = Bill.formatMoney(Math.round(b.total * 100));
+    $('view-note').hidden = items.length > 0;
+    $('view-print').disabled = items.length === 0;
+    $('view-overlay').hidden = false;
+  }
+
+  function closeView() { $('view-overlay').hidden = true; viewing = null; }
+
   function init() {
     var today = Bill.localDate(new Date());
     setRange(today, today);
+    $('view-close').addEventListener('click', closeView);
+    $('view-print').addEventListener('click', function () { if (viewing) Billing.printBill(viewing); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('view-overlay').hidden && $('receipt-overlay').hidden) closeView(); });
     wireDateBox('bills-from'); wireDateBox('bills-to');
     $('bills-today').addEventListener('click', function () { var d = Bill.localDate(new Date()); setRange(d, d); status(''); paint(); });
     $('bills-export').addEventListener('click', function () { exportBills(shown); });

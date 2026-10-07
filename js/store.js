@@ -52,9 +52,10 @@
     });
   }
 
-  // Issues the next bill number and saves {billNo, date, total} in ONE transaction, so a bill
+  // Issues the next bill number and saves {billNo, date, total, time, items} in ONE transaction, so a bill
   // can never exist without its number being used up, and two bills can never share a number.
-  function saveBill(total, now) {
+  // items: [{ name_en, name_ta, unit, qty, price, amount }] — kept so a bill can be viewed and reprinted later.
+  function saveBill(total, now, items) {
     var date = Bill.localDate(now);
     return open().then(function (db) {
       return new Promise(function (resolve, reject) {
@@ -69,7 +70,7 @@
         };
         function issue(last) {
           var n = last + 1;
-          out = { billNo: Bill.billNo(date, n), date: date, total: total };
+          out = { billNo: Bill.billNo(date, n), date: date, total: total, time: Bill.formatTime(now), items: items || [] };
           tx.objectStore('bills').add(out);
           meta.put({ key: 'counter:' + date, n: n });
         }

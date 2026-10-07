@@ -24,13 +24,23 @@ If you rename the default branch, keep it in the workflow's `branches:` list (`m
 ## Bills and backup (step 4)
 
 - **Dates are always `DD-MM-YYYY`** (07-10-2026): on the Bills screen, the receipt, the products-loaded time, the
-  Excel file and its file name. Behind the scenes they are kept as sortable `YYYY-MM-DD`. Bill numbers keep the
-  form `20261007-001` (year-month-day first, so they sort in order).
+  Excel file and its file name. Behind the scenes they are kept as sortable `YYYY-MM-DD`.
+- **Bill numbers are `DDMMYYYY-NNN`** (`07102026-003`; NNN restarts each day). Bills saved by earlier versions
+  (stored as `20261007-003`) are shown in the same style.
 - **Bills** tab: type a **From / To** date range as `DD-MM-YYYY` (digits alone are enough — the dashes are added as you
-  type; `7/10/2026` also works) or tap the calendar button. Default is today; an empty box means no limit. Bills are
-  grouped by day, newest first, with each day's count and total and one overall total at the top.
-- **Export to Excel** downloads `bills-07-10-2026.xlsx` (or `bills-04-10-2026_to_07-10-2026.xlsx`). Sheet **Bills** has
-  exactly `date · bill_no · total`, with the date a real Excel date shown as `07-10-2026`; sheet **Daily totals** has per-day counts and totals and a grand total.
+  type; `7/10/2026` also works) or tap the calendar button. Default is today; an empty box means no limit.
+  The headline reads `07-10-2026 - 3 bills · ₹ 1,604.00` for one day and `04-10-2026 - 07-10-2026 - 7 bills · ₹ 220.80`
+  for a range.
+- Bills are listed per day, newest first, as a table **SNo | Bill No | Grand Total | Ops**.
+  **View** opens the bill as a read-only table (SNo | Amt | Product name | Qty | T. Amount, Grand Total) with Print and
+  Close; **Print** prints that bill's receipt straight away.
+- **Each bill is saved with its items** (name, quantity, price, amount) on the phone, which is what makes View and
+  Print possible. Bills saved before this was added have no items: View shows only their number, date and total, and
+  Print is disabled for them.
+- **Export to Excel** is a small link under the list (`Export to Excel (3 bills)`). It downloads
+  `bills-07-10-2026.xlsx` (or `bills-04-10-2026_to_07-10-2026.xlsx`) with two sheets: **Bills** (`date · bill_no ·
+  total`, the date a real Excel date shown as `07-10-2026`) and **Bill items** (`date · bill_no · sno · product_name ·
+  qty · unit · amt · t_amount`, one row per item of every bill; bills without saved items have no rows there).
 - Bills live only in this browser's storage, so **clearing Chrome's site data deletes them**. Any earlier
   day with bills not yet exported shows a warning, an orange dot on the Bills tab, and an **Export them**
   button. Today never nags. "Exported" means the file was handed to the browser's downloads — the app
@@ -64,10 +74,9 @@ microphone keeps cutting out. On Android each restart may play Chrome's small li
   is cancelled. Otherwise the bill is **saved and closed**, the table is cleared and the mic stays live for the next
   customer. It does **not** print by itself. **Generate Bill** does the same immediately, without the countdown.
 - **"Print bill"** (both words) prints the **last confirmed bill** — never the one still being built. A small green
-  "Bill 20261007-001 saved … say “print bill”" bar with a **Print** button appears after each confirm (it
+  "Bill 07102026-001 saved … say “print bill”" bar with a **Print** button appears after each confirm (it
   disappears after a minute or once printed; saying "print bill" works as long as the page stays open).
-  Only the most recent confirmed bill can be printed: lines are not stored, so confirm the next bill *before*
-  printing the previous one and the previous receipt is gone.
+  "Print bill" always means the last confirmed bill; any earlier bill can be reprinted from the Bills tab (View / Print).
 - While the receipt screen is open, speech is ignored; it closes when the print dialog closes (or tap **New bill**).
 - **EN / தமிழ்** picks the speech language (not changeable while live).
 - Speech recognition is the browser's own (Chrome sends audio to Google's service), so it **needs internet** and

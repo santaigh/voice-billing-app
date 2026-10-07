@@ -39,9 +39,18 @@ t('formatting', () => {
   assert.strictEqual(Bill.formatQty(0.5), '0.5');
   assert.strictEqual(Bill.formatQty(2), '2');
   assert.strictEqual(Bill.localDate(new Date(2026, 9, 7, 23, 59)), '2026-10-07');
-  assert.strictEqual(Bill.billNo('2026-10-07', 1), '20261007-001');
-  assert.strictEqual(Bill.billNo('2026-10-07', 1234), '20261007-1234');
+  assert.strictEqual(Bill.billNo('2026-10-07', 1), '07102026-001');          // DDMMYYYY-NNN
+  assert.strictEqual(Bill.billNo('2026-10-07', 1234), '07102026-1234');
+  assert.strictEqual(Bill.billNo('2026-01-31', 12), '31012026-012');
+  assert.strictEqual(Bill.formatTime(new Date(2026, 9, 7, 9, 5)), '09:05');
   assert.strictEqual(Bill.formatDateTime(new Date(2026, 0, 5, 9, 3)), '05-01-2026 09:03');
+});
+
+t('bill label: old (20261007-003) and new (07102026-003) numbers both show as DDMMYYYY-NNN', () => {
+  assert.strictEqual(Bill.label({ billNo: '20261007-003', date: '2026-10-07' }), '07102026-003');
+  assert.strictEqual(Bill.label({ billNo: '07102026-004', date: '2026-10-07' }), '07102026-004');
+  assert.strictEqual(Bill.label({ billNo: '20261231-1000', date: '2026-12-31' }), '31122026-1000');
+  assert.strictEqual(Bill.seqOf('20261007-003'), 3); assert.strictEqual(Bill.seqOf('07102026-1000'), 1000); assert.strictEqual(Bill.seqOf('junk'), 0);
 });
 
 t('dates: shown as DD-MM-YYYY, typed dates parsed back to YYYY-MM-DD', () => {

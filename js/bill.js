@@ -60,8 +60,17 @@
     return pad(d.getDate(), 2) + '-' + pad(d.getMonth() + 1, 2) + '-' + d.getFullYear() + ' ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2);
   }
 
-  // '2026-10-07', 5 -> '20261007-005'
-  function billNo(date, n) { return date.replace(/-/g, '') + '-' + pad(n, 3); }
+  // '2026-10-07', 5 -> '07102026-005' (DDMMYYYY-NNN)
+  function billNo(date, n) { return date.slice(8, 10) + date.slice(5, 7) + date.slice(0, 4) + '-' + pad(n, 3); }
+
+  // the number after the dash, from either the old (20261007-005) or the new (07102026-005) style
+  function seqOf(no) { return parseInt(String(no).split('-')[1], 10) || 0; }
+
+  // How a bill's number is SHOWN: always DDMMYYYY-NNN, built from its date, so bills saved
+  // before the change (stored as 20261007-005) read 07102026-005 as well.
+  function label(b) { return billNo(b.date, seqOf(b.billNo)); }
+
+  function formatTime(d) { return pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2); }
 
   // A cart line holds the raw typed text; this says whether it is billable and what it adds up to.
   function evalLine(line) {
@@ -73,6 +82,6 @@
 
   var api = { unitLabel: unitLabel, allowsDecimal: allowsDecimal, parseQty: parseQty, parsePrice: parsePrice, toPaise: toPaise, lineTotal: lineTotal,
               formatMoney: formatMoney, formatQty: formatQty, localDate: localDate, displayDate: displayDate, parseDisplayDate: parseDisplayDate, formatDateTime: formatDateTime,
-              billNo: billNo, evalLine: evalLine };
+              billNo: billNo, seqOf: seqOf, label: label, formatTime: formatTime, evalLine: evalLine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Bill = api;
 })(typeof window !== 'undefined' ? window : this);

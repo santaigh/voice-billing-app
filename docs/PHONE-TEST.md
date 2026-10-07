@@ -41,8 +41,12 @@ Write down anything that does not match and send it back.
       installed before they show up in Chrome's print list. Note the printer **model** if it does not appear.
 - [ ] Check: nothing is cut off at the right edge, Tamil/₹ print correctly, the paper feeds enough at the end.
 
-## 6. Bills and backup
-- [ ] Bills tab shows today's bills with a total. **Export to Excel** → a file lands in **Downloads**. Open it.
+## 6. Bills, View / Print and backup
+- [ ] Bills tab shows today's bills as a table **SNo | Bill No | Grand Total | Ops**, with the headline
+      `DD-MM-YYYY - N bills · ₹ total`.
+- [ ] Tap **View** on a bill: the items appear as a table with the Grand Total. Tap **Print** (on the row or in the View) and check the receipt.
+- [ ] Tap **Export to Excel (N bills)** (small link under the list). A file lands in **Downloads**. Open it: sheet **Bills** has
+      the bill numbers and totals, sheet **Bill items** has every item. Dates read `07-10-2026`.
 - [ ] Next day: the Bills tab shows an orange dot and a warning until yesterday's bills are exported.
 
 ## What to send back

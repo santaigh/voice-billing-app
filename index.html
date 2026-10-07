@@ -82,10 +82,10 @@
       </div>
       <p id="bills-range-error" class="status bad" role="alert" hidden>Type dates as DD-MM-YYYY, for example 07-10-2026.</p>
       <p id="bills-summary" class="summary big"></p>
-      <button id="bills-export" class="primary wide" type="button" disabled>Export to Excel</button>
-      <p id="bills-status" class="status" role="status" hidden></p>
       <p id="bills-empty" class="placeholder">No bills in this period.</p>
       <div id="bills-list"></div>
+      <p class="exportrow"><button id="bills-export" class="linkbtn" type="button" disabled>Export to Excel</button></p>
+      <p id="bills-status" class="status" role="status" hidden></p>
     </section>
 
     <section id="screen-products" hidden>
@@ -112,10 +112,31 @@
     </section>
   </main>
 
+  <div id="view-overlay" hidden role="dialog" aria-labelledby="view-title">
+    <div class="receipt-actions">
+      <button id="view-print" class="primary" type="button">Print</button>
+      <button id="view-close" class="secondary" type="button">Close</button>
+    </div>
+    <div class="viewpaper">
+      <h2 id="view-title"></h2>
+      <p id="view-sub" class="view-sub"></p>
+      <p id="view-note" class="status warn" hidden>The items of this bill were not saved (it was saved before items were kept), so only its number, date and total can be shown, and it cannot be reprinted.</p>
+      <table class="billtable viewtable">
+        <thead>
+          <tr><th class="c-sno">SNo</th><th class="c-amt">Amt</th><th class="c-name">Product name</th><th class="c-qty">Qty</th><th class="c-total">T. Amount</th></tr>
+        </thead>
+        <tbody id="view-body"></tbody>
+        <tfoot>
+          <tr><td class="gt-label" colspan="4">Grand Total ₹</td><td id="view-total" class="c-total gt-amount">0.00</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
   <div id="receipt-overlay" hidden>
     <div class="receipt-actions">
       <button id="receipt-print" class="primary" type="button">Print again</button>
-      <button id="receipt-new" class="secondary" type="button">New bill</button>
+      <button id="receipt-new" class="secondary" type="button">Close</button>
     </div>
     <div id="receipt-paper" class="paper"></div>
   </div>

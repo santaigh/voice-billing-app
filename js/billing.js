@@ -224,14 +224,16 @@
   function generate() {
     stopConfirm();
     if (busy || !cart.length) return;
-    var lines = cart.map(function (l) { var r = Bill.evalLine(l); return { name: l.name_en, unit: l.unit, qty: r.qty, price: r.price, amountPaise: r.totalPaise, ok: r.ok }; });
+    var lines = cart.map(function (l) { var r = Bill.evalLine(l); return { name_en: l.name_en, name_ta: l.name_ta, unit: l.unit, qty: r.qty, price: r.price, amountPaise: r.totalPaise, ok: r.ok }; });
     if (!lines.every(function (l) { return l.ok; })) return;
     var totalPaise = lines.reduce(function (s, l) { return s + l.amountPaise; }, 0), now = new Date();
+    // the items are kept with the bill so it can be viewed and reprinted later from the Bills tab
+    var items = lines.map(function (l) { return { name_en: l.name_en, name_ta: l.name_ta, unit: l.unit, qty: l.qty, price: l.price, amount: l.amountPaise / 100 }; });
     busy = true; updateTotals();
-    Store.saveBill(totalPaise / 100, now).then(function (bill) {
-      lastReceipt = { bill: bill, now: now, lines: lines, totalPaise: totalPaise };
+    Store.saveBill(totalPaise / 100, now, items).then(function (bill) {
+      lastReceipt = receiptFromBill(bill);
       cart = []; render(); hideUndo();
-      showSaved(bill, totalPaise);                              // saved and closed: ready for the next customer; printing is a separate step
+      showSaved(bill);                                          // saved and closed: ready for the next customer; printing is a separate step
     }).catch(function () {
       $('bill-msg').hidden = false;
       $('bill-msg').className = 'status bad';
@@ -240,8 +242,18 @@
   }
 
   // ---- bill saved: print on request ("print bill" or the Print button) ----
-  function showSaved(bill, totalPaise) {
-    $('saved-text').textContent = 'Bill ' + bill.billNo + ' saved · ₹ ' + Bill.formatMoney(totalPaise) + ' — say “print bill”';
+  // A saved bill (as stored) -> what the receipt shows. Bills saved before items were kept have no lines.
+  function receiptFromBill(b) {
+    return {
+      label: Bill.label(b),
+      when: Bill.displayDate(b.date) + (b.time ? ' ' + b.time : ''),
+      lines: (b.items || []).map(function (it) { return { name: it.name_en, unit: it.unit, qty: it.qty, price: it.price, amountPaise: Math.round(it.amount * 100) }; }),
+      totalPaise: Math.round(b.total * 100)
+    };
+  }
+
+  function showSaved(bill) {
+    $('saved-text').textContent = 'Bill ' + Bill.label(bill) + ' saved · ₹ ' + Bill.formatMoney(Math.round(bill.total * 100)) + ' — say “print bill”';
     $('saved-bar').hidden = false;
     clearTimeout(savedTimer);
     savedTimer = setTimeout(hideSaved, SAVED_MS);
@@ -253,7 +265,7 @@
   function printLast() {
     if (!lastReceipt) { setHeard('No confirmed bill to print yet. Say “bill confirm” first.', 'warn'); return; }
     hideSaved();
-    setHeard('Printing bill ' + lastReceipt.bill.billNo + '…', 'ok');
+    setHeard('Printing bill ' + lastReceipt.label + '…', 'ok');
     showReceipt(lastReceipt);
     window.print();
   }
@@ -262,8 +274,8 @@
     var paper = $('receipt-paper');
     paper.textContent = '';
     if (shopName) paper.appendChild(el('div', 'r-shop', shopName));
-    paper.appendChild(el('div', 'r-meta', 'Bill No: ' + r.bill.billNo));
-    paper.appendChild(el('div', 'r-meta', Bill.formatDateTime(r.now)));
+    paper.appendChild(el('div', 'r-meta', 'Bill No: ' + r.label));
+    paper.appendChild(el('div', 'r-meta', r.when));
     paper.appendChild(el('hr'));
     r.lines.forEach(function (l) {
       paper.appendChild(el('div', 'r-name', l.name));
@@ -402,6 +414,13 @@
   window.Billing = {
     init: init,
     setShop: function (name) { shopName = name; },
+    // Print any saved bill (used by the Bills tab). Returns false for a bill saved before items were kept.
+    printBill: function (b) {
+      if (!b || !b.items || !b.items.length) return false;
+      showReceipt(receiptFromBill(b));
+      window.print();
+      return true;
+    },
     setProducts: function (list) {
       products = list;
       $('bill-noproducts').hidden = list.length > 0;

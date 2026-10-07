@@ -212,10 +212,12 @@ const FAKE = () => {
   assert.strictEqual(await page.evaluate(() => window.__prints), 0, 'confirming saves and closes the bill; it does not print');
   assert.ok(await page.locator('#receipt-overlay').isHidden());
   const today = await page.evaluate(() => Bill.localDate(new Date()));
-  const no1 = today.replace(/-/g, '') + '-001';
+  const no1 = today.slice(8) + today.slice(5, 7) + today.slice(0, 4) + '-001';   // DDMMYYYY-001
   assert.match(await page.textContent('#saved-text'), new RegExp('Bill ' + no1 + ' saved · ₹ 132\\.00 — say “print bill”'));
   assert.strictEqual(await rows().count(), 0, 'the table is cleared for the next customer');
-  assert.deepStrictEqual(await page.evaluate(() => Store.loadBills()), [{ billNo: no1, date: today, total: 132 }]);
+  const stored = await page.evaluate(() => Store.loadBills());
+  assert.deepStrictEqual(stored.map(b => [b.billNo, b.date, b.total]), [[no1, today, 132]]);
+  assert.deepStrictEqual(stored[0].items.map(i => [i.name_en, i.qty, i.unit, i.price, i.amount]), [['Maida', 2, 'KG', 42, 84], ['Sugar', 1, 'KG', 48, 48]]);
   assert.strictEqual(await mic(), 'true', 'still live for the next customer');
   assert.strictEqual(await page.locator('#last-bill').count(), 0, 'no last-bill strip');
 

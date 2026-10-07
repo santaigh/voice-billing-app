@@ -84,7 +84,8 @@ const os = require('os');
   assert.strictEqual(await page.evaluate(() => window.__prints), 0, 'confirming does not print');
   assert.ok(await page.locator('#receipt-overlay').isHidden());
   const today = await page.evaluate(() => Bill.localDate(new Date()));
-  const no1 = today.replace(/-/g, '') + '-001';
+  const bn = (iso, n) => iso.slice(8) + iso.slice(5, 7) + iso.slice(0, 4) + '-' + String(n).padStart(3, '0');   // DDMMYYYY-NNN
+  const no1 = bn(today, 1);
   assert.match(await page.textContent('#saved-text'), new RegExp('Bill ' + no1 + ' saved · ₹ 26\\.50 — say “print bill”'));
   assert.strictEqual(await page.locator('#bill-cart .line').count(), 0);
   assert.strictEqual(await page.locator('#last-bill').count(), 0, 'no last-bill strip any more');
@@ -106,14 +107,17 @@ const os = require('os');
   await page.fill('#bill-search', 'salt'); await page.press('#bill-search', 'Enter');
   await generate.click();
   await page.waitForSelector('#saved-bar:not([hidden])');
-  assert.match(await page.textContent('#saved-text'), new RegExp('Bill ' + today.replace(/-/g, '') + '-002 saved'));
+  assert.match(await page.textContent('#saved-text'), new RegExp('Bill ' + bn(today, 2) + ' saved'));
   await page.click('#saved-print');
   await page.waitForSelector('#receipt-overlay:not([hidden])');
-  assert.match(await page.textContent('#receipt-paper'), new RegExp('Bill No: ' + today.replace(/-/g, '') + '-002'));
+  assert.match(await page.textContent('#receipt-paper'), new RegExp('Bill No: ' + bn(today, 2)));
   await page.click('#receipt-new');
   let bills = await page.evaluate(() => Store.loadBills());
   bills.sort((a, b) => a.billNo < b.billNo ? -1 : 1);
-  assert.deepStrictEqual(bills, [{ billNo: no1, date: today, total: 26.5 }, { billNo: today.replace(/-/g, '') + '-002', date: today, total: 22 }]);
+  assert.deepStrictEqual(bills.map(b => [b.billNo, b.date, b.total]), [[no1, today, 26.5], [bn(today, 2), today, 22]]);
+  assert.match(bills[0].time, /^\d{2}:\d{2}$/);                                                    // the items are kept with the bill, for View / Print later
+  assert.deepStrictEqual(bills[0].items, [{ name_en: 'Sugar', name_ta: 'சர்க்கரை', unit: 'KG', qty: 0.25, price: 50, amount: 12.5 },
+                                          { name_en: 'Noodles (Maggi)', name_ta: 'நூடுல்ஸ்', unit: 'PKT', qty: 1, price: 14, amount: 14 }]);
 
   // numbering and shop name survive a reload; the counter restarts on a new day
   await page.reload(); await page.click('#tab-billing');
@@ -122,7 +126,7 @@ const os = require('os');
   await page.waitForSelector('#saved-bar:not([hidden])');
   await page.click('#saved-print');
   await page.waitForSelector('#receipt-overlay:not([hidden])');
-  assert.match(await page.textContent('#receipt-paper'), new RegExp('Arul Stores[\\s\\S]*' + today.replace(/-/g, '') + '-003'));
+  assert.match(await page.textContent('#receipt-paper'), new RegExp('Arul Stores[\\s\\S]*' + bn(today, 3)));
   await page.click('#receipt-new');
   const next = await page.evaluate(async () => {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);

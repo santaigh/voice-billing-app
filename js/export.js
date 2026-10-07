@@ -2,8 +2,10 @@
 (function (root) {
   'use strict';
 
-  // 'YYYYMMDD-001' -> 1
-  function seq(billNo) { return parseInt(String(billNo).split('-')[1], 10) || 0; }
+  var Bill = root.Bill || (typeof require !== 'undefined' ? require('./bill.js') : null);
+
+  // the number within the day, from either bill-number style
+  function seq(billNo) { return Bill.seqOf(billNo); }
 
   // Oldest first: by date, then by the number within the day (numeric, so -1000 comes after -999)
   function sortBills(bills) {
@@ -45,21 +47,29 @@
     return { t: 'n', v: Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000), z: 'dd-mm-yyyy' };
   }
 
+  function productName(it) { return it.name_ta ? it.name_en + ' - ' + it.name_ta : it.name_en; }
+
+  // Sheet "Bills": one row per bill (date, bill number, total).
+  // Sheet "Bill items": one row per item of every bill; bills saved before items were kept have no rows there.
+  // Dates are real Excel dates shown as dd-mm-yyyy; bill numbers read DDMMYYYY-NNN.
   function buildWorkbook(XLSX, bills) {
     var sorted = sortBills(bills), wb = XLSX.utils.book_new();
-    var rows = [['date', 'bill_no', 'total']].concat(sorted.map(function (b) { return [dateCell(b.date), b.billNo, b.total]; }));
+    var rows = [['date', 'bill_no', 'total']].concat(sorted.map(function (b) { return [dateCell(b.date), Bill.label(b), b.total]; }));
     var ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{ wch: 12 }, { wch: 16 }, { wch: 12 }];
     for (var r = 2; r <= rows.length; r++) ws['C' + r].z = '0.00';
     XLSX.utils.book_append_sheet(wb, ws, 'Bills');
 
-    var days = dayTotals(sorted), sum = 0, count = 0;
-    var drows = [['date', 'bills', 'total']].concat(days.map(function (d) { sum += d.paise; count += d.count; return [dateCell(d.date), d.count, d.paise / 100]; }));
-    drows.push(['TOTAL', count, sum / 100]);
-    var ds = XLSX.utils.aoa_to_sheet(drows);
-    ds['!cols'] = [{ wch: 12 }, { wch: 8 }, { wch: 12 }];
-    for (var q = 2; q <= drows.length; q++) ds['C' + q].z = '0.00';
-    XLSX.utils.book_append_sheet(wb, ds, 'Daily totals');
+    var irows = [['date', 'bill_no', 'sno', 'product_name', 'qty', 'unit', 'amt', 't_amount']];
+    sorted.forEach(function (b) {
+      (b.items || []).forEach(function (it, i) {
+        irows.push([dateCell(b.date), Bill.label(b), i + 1, productName(it), it.qty, Bill.unitLabel(it.unit), it.price, it.amount]);
+      });
+    });
+    var is = XLSX.utils.aoa_to_sheet(irows);
+    is['!cols'] = [{ wch: 12 }, { wch: 16 }, { wch: 5 }, { wch: 34 }, { wch: 8 }, { wch: 6 }, { wch: 10 }, { wch: 11 }];
+    for (var q = 2; q <= irows.length; q++) { is['G' + q].z = '0.00'; is['H' + q].z = '0.00'; }
+    XLSX.utils.book_append_sheet(wb, is, 'Bill items');
     return wb;
   }
 
