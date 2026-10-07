@@ -4,8 +4,19 @@ Small-shop billing that runs entirely in the browser — no server, no database.
 Products come from an Excel sheet; the cashier will speak a product name, the app shows
 its price, and a bill is printed on a 58mm thermal printer. Android Chrome is the target.
 
-**Status:** step 4 of 5 — load `products.xlsx`; bill by typing or by voice; print a receipt; list and export bills.
-Deployment to the phone (5) is still to come.
+**Status:** step 5 of 5 — everything is built; it is published with GitHub Pages and ready for a phone test
+(see [docs/PHONE-TEST.md](docs/PHONE-TEST.md)).
+
+## Publishing
+
+`.github/workflows/pages.yml` runs the unit tests and then publishes the app files (not `test/` or `tools/`) to
+GitHub Pages on every push to the default branch. One-time setup, in the GitHub repo: **Settings → Pages →
+Build and deployment → Source: GitHub Actions**. The address is `https://<user>.github.io/voice-billing-app/`.
+Pages needs an `https://` address, which the microphone also requires. The app uses only relative URLs, so it
+works under that sub-path. Only the app and `sample/products.xlsx` are public; your real product sheet and
+bills never leave the phone.
+
+If you rename the default branch, keep it in the workflow's `branches:` list (`main` is already there).
 
 ## Bills and backup (step 4)
 

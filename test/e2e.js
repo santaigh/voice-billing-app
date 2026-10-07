@@ -20,7 +20,7 @@ const notExcel = path.join(dir, 'notes.xlsx'); fs.writeFileSync(notExcel, 'hello
   const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, acceptDownloads: true });
   const page = await ctx.newPage();
   const problems = []; page.on('pageerror', e => problems.push(e.message)); page.on('console', m => m.type() === 'error' && problems.push(m.text()));
-  await page.goto('http://localhost:8000/');
+  await page.goto((process.env.BASE || 'http://localhost:8000/'));
 
   assert.match(await page.textContent('#prod-summary'), /No products loaded/);
 

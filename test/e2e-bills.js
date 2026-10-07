@@ -10,7 +10,7 @@ const XLSX = require('../vendor/xlsx.full.min.js');
   const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, acceptDownloads: true });
   const page = await ctx.newPage();
   const problems = []; page.on('pageerror', e => problems.push(e.message)); page.on('console', m => m.type() === 'error' && problems.push(m.text()));
-  await page.goto('http://localhost:8000/');
+  await page.goto((process.env.BASE || 'http://localhost:8000/'));
 
   const day = k => page.evaluate(k => Bill.localDate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - k)), k);
   const save = (total, k) => page.evaluate(([t, k]) => { const n = new Date(); return Store.saveBill(t, new Date(n.getFullYear(), n.getMonth(), n.getDate() - k, 12)); }, [total, k]);

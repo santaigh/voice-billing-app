@@ -10,7 +10,7 @@ const os = require('os');
   const page = await ctx.newPage();
   const problems = []; page.on('pageerror', e => problems.push(e.message)); page.on('console', m => m.type() === 'error' && problems.push(m.text()));
   await page.addInitScript(() => { window.__prints = 0; window.print = () => { window.__prints++; }; });
-  await page.goto('http://localhost:8000/');
+  await page.goto((process.env.BASE || 'http://localhost:8000/'));
 
   // before any products are loaded
   await page.click('#tab-billing');

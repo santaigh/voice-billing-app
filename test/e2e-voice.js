@@ -35,7 +35,7 @@ const FAKE = () => {
     const page = await ctx.newPage();
     page.on('pageerror', e => problems.push(e.message)); page.on('console', m => m.type() === 'error' && problems.push(m.text()));
     await page.addInitScript(init);
-    await page.goto('http://localhost:8000/');
+    await page.goto((process.env.BASE || 'http://localhost:8000/'));
     return page;
   }
   const say = (page, o) => page.evaluate(o => { window.__say = Object.assign({ alts: [], error: null, interim: '', hold: false }, o); }, o);
