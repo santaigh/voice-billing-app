@@ -127,9 +127,15 @@ button.wide { width: 100%; }
 .billtable .c-ops { width: 40px; text-align: center; }
 .billtable .c-name { overflow-wrap: anywhere; line-height: 1.25; }
 .billtable td.c-total { font-weight: 700; }
-.billtable input.l-price, .billtable input.l-qty { width: 100%; min-height: 40px; padding: 0 6px; text-align: right; font-size: .95rem; }
+.billtable input.l-price, .billtable input.l-qty { width: 100%; min-height: 40px; padding: 0 4px; text-align: right; font-size: .95rem;
+  background: transparent; border: 1px solid transparent; border-bottom-color: #c3cbc6; border-radius: 4px; }   /* reads as plain text; a faint underline and the focus ring show it can be edited */
+.billtable input.l-price:focus, .billtable input.l-qty:focus { border-color: var(--green); background: #fff; outline: none; }
+.billtable input.invalid, .billtable input.invalid:focus { border-color: var(--bad); background: var(--bad-bg); }
+.billtable tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; padding-top: 10px; padding-bottom: 10px; font-weight: 700; background: var(--card); }
+.billtable .gt-label { text-align: right; font-size: 1rem; }
+.billtable .gt-amount { font-size: 1.05rem; }
 .billtable .c-qty { white-space: nowrap; }
-.billtable .c-qty input.l-qty { width: 46px; display: inline-block; }
+.billtable .c-qty input.l-qty { width: 44px; display: inline-block; }
 .billtable .l-unit { margin-left: 3px; font-size: .8rem; }
 .billtable .l-remove { width: 36px; height: 36px; padding: 0; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--bad); }
 .billtable .l-remove:active { background: var(--bad-bg); }

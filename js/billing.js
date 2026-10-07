@@ -150,6 +150,7 @@
       if (r.ok) sum += r.totalPaise; else allOk = false;
     });
     $('bill-total').textContent = Bill.formatMoney(sum);
+    $('bill-foot-total').textContent = Bill.formatMoney(sum);
     $('bill-table').hidden = cart.length === 0;
     $('bill-empty').hidden = cart.length > 0;
     $('bill-generate').disabled = !allOk || busy;

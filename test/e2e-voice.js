@@ -115,6 +115,8 @@ const FAKE = () => {
   assert.strictEqual(await rowText(1), '2 48.00 Sugar - சர்க்கரை 1 Kg 48.00');
   assert.strictEqual(await total(), '132.00');
   assert.match(await page.textContent('.bb-total'), /Grand Total/);
+  assert.match(await page.locator('#bill-table tfoot').innerText(), /Grand Total\s*₹/);   // also as the last row of the table, under T. Amount
+  assert.strictEqual(await page.textContent('#bill-foot-total'), '132.00');
   await page.screenshot({ path: shots + '/live-table.png' });
 
   // ---------- 4. "to kg" (Chrome's spelling of "two kg"); same product merges into its row; Undo ----------
