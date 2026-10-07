@@ -26,7 +26,7 @@
   // ---- products screen ----
   function renderProducts(products, info) {
     $('prod-summary').textContent = products.length
-      ? products.length + (products.length === 1 ? ' product' : ' products') + (info ? ' · ' + info.fileName + ' · ' + new Date(info.loadedAt).toLocaleString() : '')
+      ? products.length + (products.length === 1 ? ' product' : ' products') + (info ? ' · ' + info.fileName + ' · ' + Bill.formatDateTime(new Date(info.loadedAt)) : '')
       : 'No products loaded yet.';
     $('prod-empty').hidden = products.length > 0;
 

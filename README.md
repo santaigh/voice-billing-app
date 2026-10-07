@@ -23,10 +23,14 @@ If you rename the default branch, keep it in the workflow's `branches:` list (`m
 
 ## Bills and backup (step 4)
 
-- **Bills** tab: pick a **From / To** date range (default today; an empty box means no limit). Bills are
+- **Dates are always `DD-MM-YYYY`** (07-10-2026): on the Bills screen, the receipt, the products-loaded time, the
+  Excel file and its file name. Behind the scenes they are kept as sortable `YYYY-MM-DD`. Bill numbers keep the
+  form `20261007-001` (year-month-day first, so they sort in order).
+- **Bills** tab: type a **From / To** date range as `DD-MM-YYYY` (digits alone are enough — the dashes are added as you
+  type; `7/10/2026` also works) or tap the calendar button. Default is today; an empty box means no limit. Bills are
   grouped by day, newest first, with each day's count and total and one overall total at the top.
-- **Export to Excel** downloads `bills-YYYY-MM-DD.xlsx` (or `bills-FROM_to_TO.xlsx`). Sheet **Bills** has
-  exactly `date · bill_no · total`; sheet **Daily totals** has per-day counts and totals and a grand total.
+- **Export to Excel** downloads `bills-07-10-2026.xlsx` (or `bills-04-10-2026_to_07-10-2026.xlsx`). Sheet **Bills** has
+  exactly `date · bill_no · total`, with the date a real Excel date shown as `07-10-2026`; sheet **Daily totals** has per-day counts and totals and a grand total.
 - Bills live only in this browser's storage, so **clearing Chrome's site data deletes them**. Any earlier
   day with bills not yet exported shows a warning, an orange dot on the Bills tab, and an **Export them**
   button. Today never nags. "Exported" means the file was handed to the browser's downloads — the app

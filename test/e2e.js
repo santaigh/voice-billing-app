@@ -27,6 +27,7 @@ const notExcel = path.join(dir, 'notes.xlsx'); fs.writeFileSync(notExcel, 'hello
   await page.setInputFiles('#prod-file', 'sample/products.xlsx');
   await page.waitForFunction(() => document.querySelectorAll('#prod-body tr').length === 103);
   assert.match(await page.textContent('#prod-status'), /Loaded 103 products\./);
+  assert.match(await page.textContent('#prod-summary'), /103 products · products\.xlsx · \d{2}-\d{2}-\d{4} \d{2}:\d{2}/);
   await page.screenshot({ path: (process.env.SHOT_DIR || os.tmpdir()) + '/products.png' });
 
   await page.reload();                                   // persistence

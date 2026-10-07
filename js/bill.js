@@ -41,8 +41,23 @@
 
   function localDate(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1, 2) + '-' + pad(d.getDate(), 2); }
 
+  // Dates are stored as sortable 'YYYY-MM-DD' and always SHOWN as 'DD-MM-YYYY'.
+  function displayDate(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? m[3] + '-' + m[2] + '-' + m[1] : String(iso || '');
+  }
+
+  // What a person typed -> 'YYYY-MM-DD', or '' if it is not a real date. Accepts 7-10-2026, 07/10/2026, 07.10.2026.
+  function parseDisplayDate(text) {
+    var m = /^\s*(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})\s*$/.exec(String(text || ''));
+    if (!m) return '';
+    var d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]), t = new Date(y, mo - 1, d);
+    if (t.getFullYear() !== y || t.getMonth() !== mo - 1 || t.getDate() !== d) return '';   // 31-02-2026, 00-01-2026 ...
+    return y + '-' + pad(mo, 2) + '-' + pad(d, 2);
+  }
+
   function formatDateTime(d) {
-    return pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear() + ' ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2);
+    return pad(d.getDate(), 2) + '-' + pad(d.getMonth() + 1, 2) + '-' + d.getFullYear() + ' ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2);
   }
 
   // '2026-10-07', 5 -> '20261007-005'
@@ -57,7 +72,7 @@
   }
 
   var api = { unitLabel: unitLabel, allowsDecimal: allowsDecimal, parseQty: parseQty, parsePrice: parsePrice, toPaise: toPaise, lineTotal: lineTotal,
-              formatMoney: formatMoney, formatQty: formatQty, localDate: localDate, formatDateTime: formatDateTime,
+              formatMoney: formatMoney, formatQty: formatQty, localDate: localDate, displayDate: displayDate, parseDisplayDate: parseDisplayDate, formatDateTime: formatDateTime,
               billNo: billNo, evalLine: evalLine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Bill = api;
 })(typeof window !== 'undefined' ? window : this);

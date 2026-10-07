@@ -10,17 +10,27 @@
     return e;
   }
 
-  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  function niceDate(d) { return d.slice(8) + ' ' + MONTHS[Number(d.slice(5, 7)) - 1] + ' ' + d.slice(0, 4); }
+  var niceDate = Bill.displayDate;     // every date on screen reads DD-MM-YYYY
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
   var all = [], exported = {}, shown = [];
 
-  // The chosen range. An empty box means "no limit" on that side; reversed boxes are simply swapped.
+  // The chosen range, from the two text boxes (DD-MM-YYYY). A blank box means "no limit" on that side;
+  // reversed boxes are simply swapped. Returns null while a box holds something that is not a real date.
+  function range() {
+    var out = [];
+    for (var i = 0; i < 2; i++) {
+      var box = $(i ? 'bills-to' : 'bills-from'), text = box.value.trim();
+      out.push(text === '' ? '' : Bill.parseDisplayDate(text) || null);
+      if (out[i] === null) return null;
+    }
+    if (out[0] && out[1] && out[0] > out[1]) out.reverse();
+    return out;
+  }
+
   function selected() {
-    var a = $('bills-from').value, b = $('bills-to').value;
-    if (a && b && a > b) { var t = a; a = b; b = t; }
-    return Export.sortBills(all.filter(function (x) { return (!a || x.date >= a) && (!b || x.date <= b); }));
+    var r = range() || ['', ''];
+    return Export.sortBills(all.filter(function (x) { return (!r[0] || x.date >= r[0]) && (!r[1] || x.date <= r[1]); }));
   }
 
   function status(msg, kind) {
@@ -104,12 +114,48 @@
     });
   }
 
-  function setRange(from, to) { $('bills-from').value = from; $('bills-to').value = to; }
+  function setRange(from, to) {
+    $('bills-from').value = Bill.displayDate(from); $('bills-to').value = Bill.displayDate(to);
+    $('bills-range-error').hidden = true;
+  }
+
+  // Typing aid: digits only (a number pad has no dash key) -> 07102026 becomes 07-10-2026 as you type.
+  function autoDash(box, e) {
+    if (e && e.inputType && e.inputType.indexOf('delete') === 0) return;      // let Backspace work normally
+    var v = box.value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { box.value = Bill.displayDate(v); return; }   // pasted 2026-10-07
+    if (/[^0-9]/.test(v.replace(/[-\/.]/g, ''))) return;                    // letters: leave alone, it will be flagged
+    var d = v.replace(/[^0-9]/g, '').slice(0, 8);
+    box.value = d.length <= 2 ? d : d.length <= 4 ? d.slice(0, 2) + '-' + d.slice(2) : d.slice(0, 2) + '-' + d.slice(2, 4) + '-' + d.slice(4);
+  }
+
+  function boxChanged(box, final) {
+    var r = range(), bad = r === null;
+    var wrong = box.value.trim() !== '' && Bill.parseDisplayDate(box.value) === '';
+    box.classList.toggle('invalid', wrong && (final || box.value.length >= 10));   // no red while a date is still being typed
+    if (bad && !final) return;                                               // still typing: no complaint yet
+    $('bills-range-error').hidden = !bad;
+    if (bad) return;
+    if (final && box.value.trim() !== '') box.value = Bill.displayDate(Bill.parseDisplayDate(box.value));   // 7/10/2026 -> 07-10-2026
+    status('');
+    paint();
+  }
+
+  function wireDateBox(id) {
+    var box = $(id), native = $(id + '-native');
+    box.addEventListener('input', function (e) { $('bills-range-error').hidden = true; autoDash(box, e); boxChanged(box, false); });   // editing clears the complaint; leaving the box with a bad date brings it back
+    box.addEventListener('change', function () { boxChanged(box, true); });
+    $(id + '-pick').addEventListener('click', function () {                  // calendar: the browser's own picker fills the box
+      native.value = Bill.parseDisplayDate(box.value) || '';
+      try { native.showPicker(); } catch (e) { native.focus(); native.click(); }
+    });
+    native.addEventListener('change', function () { box.value = Bill.displayDate(native.value); boxChanged(box, true); });
+  }
 
   function init() {
     var today = Bill.localDate(new Date());
     setRange(today, today);
-    ['bills-from', 'bills-to'].forEach(function (id) { $(id).addEventListener('change', function () { status(''); paint(); }); });
+    wireDateBox('bills-from'); wireDateBox('bills-to');
     $('bills-today').addEventListener('click', function () { var d = Bill.localDate(new Date()); setRange(d, d); status(''); paint(); });
     $('bills-export').addEventListener('click', function () { exportBills(shown); });
     $('bills-warn-go').addEventListener('click', function () {

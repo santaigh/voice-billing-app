@@ -29,22 +29,32 @@
       .map(function (d) { return d.date; });
   }
 
+  function show(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m ? m[3] + '-' + m[2] + '-' + m[1] : iso; }
+
+  // 'bills-07-10-2026.xlsx' for one day, 'bills-04-10-2026_to_07-10-2026.xlsx' for a range
   function fileName(bills) {
     if (!bills.length) return 'bills.xlsx';
-    var days = dayTotals(bills), first = days[0].date, last = days[days.length - 1].date;
+    var days = dayTotals(bills), first = show(days[0].date), last = show(days[days.length - 1].date);
     return first === last ? 'bills-' + first + '.xlsx' : 'bills-' + first + '_to_' + last + '.xlsx';
+  }
+
+  // A real Excel date (serial number) that Excel shows as 07-10-2026 whatever the PC's regional settings.
+  function dateCell(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (!m) return iso;
+    return { t: 'n', v: Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000), z: 'dd-mm-yyyy' };
   }
 
   function buildWorkbook(XLSX, bills) {
     var sorted = sortBills(bills), wb = XLSX.utils.book_new();
-    var rows = [['date', 'bill_no', 'total']].concat(sorted.map(function (b) { return [b.date, b.billNo, b.total]; }));
+    var rows = [['date', 'bill_no', 'total']].concat(sorted.map(function (b) { return [dateCell(b.date), b.billNo, b.total]; }));
     var ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{ wch: 12 }, { wch: 16 }, { wch: 12 }];
     for (var r = 2; r <= rows.length; r++) ws['C' + r].z = '0.00';
     XLSX.utils.book_append_sheet(wb, ws, 'Bills');
 
     var days = dayTotals(sorted), sum = 0, count = 0;
-    var drows = [['date', 'bills', 'total']].concat(days.map(function (d) { sum += d.paise; count += d.count; return [d.date, d.count, d.paise / 100]; }));
+    var drows = [['date', 'bills', 'total']].concat(days.map(function (d) { sum += d.paise; count += d.count; return [dateCell(d.date), d.count, d.paise / 100]; }));
     drows.push(['TOTAL', count, sum / 100]);
     var ds = XLSX.utils.aoa_to_sheet(drows);
     ds['!cols'] = [{ wch: 12 }, { wch: 8 }, { wch: 12 }];

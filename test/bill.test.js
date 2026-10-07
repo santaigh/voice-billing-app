@@ -41,7 +41,17 @@ t('formatting', () => {
   assert.strictEqual(Bill.localDate(new Date(2026, 9, 7, 23, 59)), '2026-10-07');
   assert.strictEqual(Bill.billNo('2026-10-07', 1), '20261007-001');
   assert.strictEqual(Bill.billNo('2026-10-07', 1234), '20261007-1234');
-  assert.strictEqual(Bill.formatDateTime(new Date(2026, 0, 5, 9, 3)), '05/01/2026 09:03');
+  assert.strictEqual(Bill.formatDateTime(new Date(2026, 0, 5, 9, 3)), '05-01-2026 09:03');
+});
+
+t('dates: shown as DD-MM-YYYY, typed dates parsed back to YYYY-MM-DD', () => {
+  assert.strictEqual(Bill.displayDate('2026-10-07'), '07-10-2026');
+  assert.strictEqual(Bill.displayDate(''), ''); assert.strictEqual(Bill.displayDate('junk'), 'junk');
+  for (const ok of ['07-10-2026', '7-10-2026', '07/10/2026', '07.10.2026', ' 07-10-2026 ']) assert.strictEqual(Bill.parseDisplayDate(ok), '2026-10-07', ok);
+  assert.strictEqual(Bill.parseDisplayDate('7-1-2026'), '2026-01-07');
+  assert.strictEqual(Bill.parseDisplayDate('29-02-2028'), '2028-02-29');     // leap day is real
+  for (const bad of ['', '31-02-2026', '29-02-2027', '00-10-2026', '07-13-2026', '07-10-26', '2026-10-07', '7/10', 'abc', '07-10-20266'])
+    assert.strictEqual(Bill.parseDisplayDate(bad), '', 'should reject "' + bad + '"');
 });
 
 t('evalLine flags each bad field', () => {

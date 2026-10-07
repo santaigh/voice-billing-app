@@ -29,23 +29,31 @@ t('pending days: only earlier days with bills newer than the last export', () =>
   assert.deepStrictEqual(E.pendingDays([], {}, today), []);
 });
 
-t('file names', () => {
-  assert.strictEqual(E.fileName([B('a-1', '2026-10-07', 1)]), 'bills-2026-10-07.xlsx');
-  assert.strictEqual(E.fileName(bills), 'bills-2026-10-05_to_2026-10-07.xlsx');
+t('file names use DD-MM-YYYY', () => {
+  assert.strictEqual(E.fileName([B('a-1', '2026-10-07', 1)]), 'bills-07-10-2026.xlsx');
+  assert.strictEqual(E.fileName(bills), 'bills-05-10-2026_to_07-10-2026.xlsx');
   assert.strictEqual(E.fileName([]), 'bills.xlsx');
 });
 
-t('workbook: Bills sheet is exactly date / bill_no / total, plus a Daily totals sheet', () => {
+t('workbook: real Excel dates shown as DD-MM-YYYY; Bills sheet is exactly date / bill_no / total', () => {
   const wb = E.buildWorkbook(XLSX, bills);
   const back = XLSX.read(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), { type: 'array' });
   assert.deepStrictEqual(back.SheetNames, ['Bills', 'Daily totals']);
-  const rows = XLSX.utils.sheet_to_json(back.Sheets['Bills']);
-  assert.deepStrictEqual(Object.keys(rows[0]), ['date', 'bill_no', 'total']);
-  assert.deepStrictEqual(rows.map(r => [r.date, r.bill_no, r.total]), [
-    ['2026-10-05', '20261005-001', 10.1], ['2026-10-05', '20261005-002', 20.2], ['2026-10-06', '20261006-001', 50],
-    ['2026-10-07', '20261007-001', 26.5], ['2026-10-07', '20261007-002', 100]]);
-  const d = XLSX.utils.sheet_to_json(back.Sheets['Daily totals']);
-  assert.deepStrictEqual(d.map(r => [r.date, r.bills, r.total]), [['2026-10-05', 2, 30.3], ['2026-10-06', 1, 50], ['2026-10-07', 2, 126.5], ['TOTAL', 5, 206.8]]);
+  const shown = XLSX.utils.sheet_to_json(back.Sheets['Bills'], { raw: false });          // as Excel displays the cells
+  assert.deepStrictEqual(Object.keys(shown[0]), ['date', 'bill_no', 'total']);
+  assert.deepStrictEqual(shown.map(r => [r.date, r.bill_no, r.total]), [
+    ['05-10-2026', '20261005-001', '10.10'], ['05-10-2026', '20261005-002', '20.20'], ['06-10-2026', '20261006-001', '50.00'],
+    ['07-10-2026', '20261007-001', '26.50'], ['07-10-2026', '20261007-002', '100.00']]);
+  // the date cell is a number with a date format, i.e. a true date (not text); 2000-01-01 is Excel serial 36526
+  const c = back.Sheets['Bills']['A2'];
+  assert.strictEqual(c.t, 'n'); assert.strictEqual(c.w, '05-10-2026');
+  assert.strictEqual(c.v, (Date.UTC(2026, 9, 5) - Date.UTC(1899, 11, 30)) / 86400000);
+  const y2k = XLSX.read(XLSX.write(E.buildWorkbook(XLSX, [B('20000101-001', '2000-01-01', 1)]), { type: 'array', bookType: 'xlsx' }), { type: 'array' });
+  assert.strictEqual(y2k.Sheets['Bills']['A2'].v, 36526);
+  const raw = XLSX.utils.sheet_to_json(back.Sheets['Bills']);
+  assert.deepStrictEqual(raw.map(r => r.total), [10.1, 20.2, 50, 26.5, 100]);            // totals stay numbers
+  const d = XLSX.utils.sheet_to_json(back.Sheets['Daily totals'], { raw: false });
+  assert.deepStrictEqual(d.map(r => [r.date, r.bills, r.total]), [['05-10-2026', '2', '30.30'], ['06-10-2026', '1', '50.00'], ['07-10-2026', '2', '126.50'], ['TOTAL', '5', '206.80']]);
 });
 
 console.log(n + ' tests passed');

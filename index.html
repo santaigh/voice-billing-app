@@ -63,10 +63,25 @@
         <button id="bills-warn-go" class="secondary" type="button">Export them</button>
       </div>
       <div class="range">
-        <label>From <input id="bills-from" type="date"></label>
-        <label>To <input id="bills-to" type="date"></label>
+        <div class="datebox">
+          <label for="bills-from">From</label>
+          <div class="datefield">
+            <input id="bills-from" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" maxlength="10" autocomplete="off">
+            <button id="bills-from-pick" class="cal" type="button" aria-label="Pick the From date"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zM5 10v9h14v-9H5zm0-2h14V6H5v2z"/></svg></button>
+            <input id="bills-from-native" class="native" type="date" tabindex="-1" aria-hidden="true">
+          </div>
+        </div>
+        <div class="datebox">
+          <label for="bills-to">To</label>
+          <div class="datefield">
+            <input id="bills-to" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" maxlength="10" autocomplete="off">
+            <button id="bills-to-pick" class="cal" type="button" aria-label="Pick the To date"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zM5 10v9h14v-9H5zm0-2h14V6H5v2z"/></svg></button>
+            <input id="bills-to-native" class="native" type="date" tabindex="-1" aria-hidden="true">
+          </div>
+        </div>
         <button id="bills-today" class="secondary" type="button">Today</button>
       </div>
+      <p id="bills-range-error" class="status bad" role="alert" hidden>Type dates as DD-MM-YYYY, for example 07-10-2026.</p>
       <p id="bills-summary" class="summary big"></p>
       <button id="bills-export" class="primary wide" type="button" disabled>Export to Excel</button>
       <p id="bills-status" class="status" role="status" hidden></p>

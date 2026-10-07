@@ -85,6 +85,7 @@ const os = require('os');
   const today = await page.evaluate(() => Bill.localDate(new Date()));
   const no1 = today.replace(/-/g, '') + '-001';
   const receipt = await page.textContent('#receipt-paper');
+  assert.match(receipt, /\d{2}-\d{2}-\d{4} \d{2}:\d{2}/, 'receipt date reads DD-MM-YYYY HH:MM');
   for (const want of ['Arul Stores', 'Bill No: ' + no1, 'Sugar', '0.25 KG × 50.00', 'Maggi', '1 PKT × 14.00', 'TOTAL', '₹ 26.50'])
     assert.ok(receipt.includes(want), 'receipt should contain "' + want + '": ' + receipt);
   await page.screenshot({ path: shots + '/receipt.png' });
