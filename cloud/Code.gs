@@ -84,6 +84,7 @@ function heading(sheet, names, widths) {
 // sites). The app uses this only when the browser will not let it read the reply to a POST:
 //   ?action=ping&key=K&callback=f            -> f({"ok":true,"url":...,"bills":N})
 //   ?action=has&ids=a,b,c&key=K&callback=f   -> f({"ok":true,"has":{"a":true,"b":false,...}})
+// Both may also carry "lastError" (what went wrong most recently inside the script), so the app can explain a refusal.
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (!p.action) return json({ ok: true, service: 'shop-billing-sync' });
@@ -97,7 +98,7 @@ function answer(p) {
   if (denied) return denied;
   var ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
   var sheets = prepareSheets(ss);
-  if (p.action === 'ping') return { ok: true, url: ss.getUrl(), bills: Math.max(0, sheets.bills.getLastRow() - 1) };
+  if (p.action === 'ping') { var pong = { ok: true, url: ss.getUrl(), bills: Math.max(0, sheets.bills.getLastRow() - 1) }; addLastError(pong); return pong; }
   if (p.action === 'has') {
     var wanted = String(p.ids || '').split(',').filter(function (x) { return x; }).slice(0, 50);
     var last = sheets.bills.getLastRow();
@@ -105,7 +106,9 @@ function answer(p) {
     (last > 1 ? sheets.bills.getRange(2, 3, last - 1, 1).getDisplayValues() : []).forEach(function (r) { have[r[0]] = true; });
     var has = {};
     wanted.forEach(function (id) { has[id] = !!have[id]; });
-    return { ok: true, has: has };
+    var reply = { ok: true, has: has };
+    addLastError(reply);
+    return reply;
   }
   return { ok: false, error: 'unknown action' };
 }
@@ -149,16 +152,20 @@ function handle(body) {
   var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
 
   var lock = LockService.getScriptLock();
-  lock.waitLock(30000);                                      // two phones billing at once must not interleave
   try {
+    lock.waitLock(30000);                                    // two phones billing at once must not interleave
     var ss = SpreadsheetApp.openById(id);
     var sheets = prepareSheets(ss);
     if (body.action === 'ping') {
-      return { ok: true, url: ss.getUrl(), bills: Math.max(0, sheets.bills.getLastRow() - 1) };
+      var pong = { ok: true, url: ss.getUrl(), bills: Math.max(0, sheets.bills.getLastRow() - 1) };
+      addLastError(pong);
+      return pong;
     }
     if (body.action === 'bill') {
       var one = writeBill(ss, sheets, body.bill);
-      return one.error ? { ok: false, error: one.error } : { ok: true, result: one };
+      if (one.error) return { ok: false, error: one.error };
+      if (!one.duplicate) forgetError();
+      return { ok: true, result: one };
     }
     if (body.action === 'bills') {
       if (!Array.isArray(body.bills) || body.bills.length > 200) return { ok: false, error: 'bills must be a list of at most 200' };
@@ -168,12 +175,54 @@ function handle(body) {
         if (r.error) failed++; else if (r.duplicate) duplicates++; else added++;
         results.push(r);
       });
+      if (added) forgetError();
       return { ok: true, added: added, duplicates: duplicates, failed: failed, results: results };
     }
+    if (body.action === 'clear') return clearSheets(sheets);
     return { ok: false, error: 'unknown action' };
+  } catch (err) {
+    return recordError(body.action, err);                    // the owner can read this in Executions, and the app can show it
   } finally {
     lock.releaseLock();
   }
+}
+
+// Fresh start: removes every bill row from both tabs. The headings stay; nothing else in the file is touched.
+function clearSheets(sheets) {
+  var out = { bills: 0, items: 0 };
+  [['bills', sheets.bills], ['items', sheets.items]].forEach(function (p) {
+    var last = p[1].getLastRow();
+    if (last > 1) {
+      p[1].getRange(2, 1, last - 1, p[1].getMaxColumns()).clear();    // contents, links and formats; later writes set their own formats
+      out[p[0]] = last - 1;
+    }
+  });
+  forgetError();
+  return { ok: true, cleared: out };
+}
+
+// ---- what went wrong last, so a bill the sheet did not take can be explained ----
+function recordError(action, err) {
+  var message = String(err && err.message ? err.message : err).slice(0, 300);
+  console.error('Shop Billing Sync, action ' + action + ': ' + (err && err.stack ? err.stack : message));
+  try {
+    PropertiesService.getScriptProperties().setProperty('LAST_ERROR', JSON.stringify({ at: new Date().toISOString(), action: String(action), message: message }));
+  } catch (e) { /* the answer below still carries the message */ }
+  return { ok: false, error: 'script error: ' + message };
+}
+
+function forgetError() {
+  try { PropertiesService.getScriptProperties().deleteProperty('LAST_ERROR'); } catch (e) { /* ignore */ }
+}
+
+// Adds { lastError: { action, message, ageSec } } when the last problem is recent. Only called for a valid key.
+function addLastError(reply) {
+  var raw = PropertiesService.getScriptProperties().getProperty('LAST_ERROR');
+  if (!raw) return;
+  try {
+    var e = JSON.parse(raw);
+    reply.lastError = { action: e.action, message: e.message, ageSec: Math.max(0, Math.round((Date.now() - Date.parse(e.at)) / 1000)) };
+  } catch (err) { /* unreadable: leave it out */ }
 }
 
 // Constant-time comparison, so the KEY cannot be guessed from response timing.

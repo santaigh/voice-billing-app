@@ -192,6 +192,45 @@ const XLSX = require('../vendor/xlsx.full.min.js');
   assert.deepStrictEqual(rows(wbOld, 'Bills').map(r => [r.bill_no, r.total]), [[no(d30, 1), 50]]);
   assert.strictEqual(rows(wbOld, 'Bill items').length, 0);
 
+  // ---- fresh start: Delete all bills ----
+  await page.evaluate(() => Store.setShop('Arul Stores'));
+  await page.fill('#bills-from', ''); await page.fill('#bills-to', '');
+  await page.evaluate(() => Bills.refresh());
+  const countBefore = (await page.evaluate(() => Store.loadBills())).length;
+  assert.ok(countBefore > 3);
+  assert.ok(await page.locator('#bills-delete').isEnabled());
+  await page.click('#bills-delete');
+  assert.ok(await page.locator('#delete-overlay').isVisible());
+  assert.match(await page.textContent('#delete-what'), new RegExp('permanently deletes ' + countBefore + ' bills saved on this device'));
+  assert.ok((await page.textContent('#delete-what')).includes(no(today, 1)), 'tells where the numbering restarts');
+  assert.ok(await page.locator('#delete-sheet-row').isHidden(), 'no Google Sheet question when it is not connected');
+  assert.ok(await page.locator('#delete-go').isDisabled());
+  await page.fill('#delete-confirm', 'delet'); assert.ok(await page.locator('#delete-go').isDisabled(), 'typing most of the word is not enough');
+  await page.screenshot({ path: shots + '/delete-dialog.png' });
+  const dlExport = await exportNow('#delete-export');                                 // the safety copy first
+  assert.match(dlExport.suggestedFilename(), /^bills-.*\.xlsx$/); assert.ok(await page.locator('#delete-overlay').isVisible());
+  await page.click('#delete-cancel'); assert.ok(await page.locator('#delete-overlay').isHidden());
+  assert.strictEqual((await page.evaluate(() => Store.loadBills())).length, countBefore, 'Cancel deletes nothing');
+  await page.click('#bills-delete'); await page.fill('#delete-confirm', 'DELETE'); await page.press('#delete-confirm', 'Escape');
+  assert.ok(await page.locator('#delete-overlay').isHidden(), 'Escape cancels too');
+  assert.strictEqual((await page.evaluate(() => Store.loadBills())).length, countBefore);
+
+  await page.click('#bills-delete');
+  await page.fill('#delete-confirm', 'delete');                                       // any capitals are fine
+  assert.ok(await page.locator('#delete-go').isEnabled());
+  await page.click('#delete-go');
+  await page.waitForFunction(() => document.getElementById('delete-overlay').hidden);
+  assert.deepStrictEqual(await page.evaluate(() => Store.loadBills()), []);
+  assert.deepStrictEqual(await page.evaluate(() => Store.listOutbox()), []);
+  assert.deepStrictEqual(await page.evaluate(() => Store.getExported()), {}, 'the "exported" marks go too');
+  assert.strictEqual(await page.evaluate(() => Store.getShop()), 'Arul Stores', 'the shop name stays');
+  assert.ok(await page.locator('#bills-empty').isVisible()); assert.ok(await page.locator('#bills-delete').isDisabled());
+  assert.ok(await page.locator('#bills-warn').isHidden()); assert.ok(await page.locator('#bills-dot').isHidden());
+  assert.match(await page.textContent('#bills-status'), new RegExp('All bills deleted\\. The next bill is ' + no(today, 1)));
+  const fresh = await save(5, 0), freshYest = await save(6, 1);
+  assert.deepStrictEqual([fresh.billNo, freshYest.billNo], [no(today, 1), no(yest, 1)], 'numbering starts again at 001 for every day');
+  await page.screenshot({ path: shots + '/after-delete.png' });
+
   assert.deepStrictEqual(problems, []);
   console.log('e2e bills passed');
   await browser.close();

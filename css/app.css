@@ -193,3 +193,20 @@ button.wide { width: 100%; }
 .cloudline { margin: 6px 0 0; padding: 6px 10px; border-radius: 8px; background: var(--card); font-size: .9rem; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
 .cloudline .linkbtn { padding: 4px 6px; }
 .cloudline a { color: var(--green); }
+
+/* ---- Delete all bills ---- */
+.linkbtn.danger { color: var(--bad); }
+.linkbtn.danger:disabled { color: #b9a1a1; }
+#delete-overlay { position: fixed; inset: 0; z-index: 12; background: rgba(20, 28, 24, .55); display: grid; place-items: center; padding: 16px; overflow: auto; }
+.dialog { width: 100%; max-width: 440px; background: var(--card); border-radius: 12px; padding: 16px; display: grid; gap: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+.dialog h2 { margin: 0; font-size: 1.2rem; color: var(--bad); }
+.dialog p { margin: 0; }
+.dlg-keep { color: var(--muted); font-size: .92rem; }
+.dlg-check { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 8px; background: var(--warn-bg); font-size: .92rem; }
+.dlg-check input { flex: none; width: 22px; height: 22px; margin-top: 2px; }
+.dialog label { font-size: .92rem; }
+.dialog input[type="text"] { font: inherit; min-height: 48px; padding: 0 10px; border: 1px solid #b9c2bc; border-radius: 8px; width: 100%; letter-spacing: .08em; }
+.dlg-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.danger-btn { min-height: 48px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--bad); color: #fff; font: inherit; font-weight: 700; }
+.danger-btn:disabled { background: #d9b4b4; }
+@media print { body.receipt-open #delete-overlay { display: none !important; } }

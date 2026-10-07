@@ -41,6 +41,7 @@
     if (text === 'bad key') return 'The key is wrong. Copy the KEY from the script (Execution log) again and use Save & test.';
     if (/^not set up/.test(text)) return 'The script is not set up yet: open it, choose setup and press Run first.';
     if (text === 'bad request') return 'Google could not read the request.';
+    if (/^script error: /.test(text)) return 'The Google script reported an error: ' + text.slice(14);
     return text || 'Google did not accept the request.';
   }
 
@@ -106,6 +107,12 @@
     });
   }
 
+  // the script's own explanation of a recent failure ("lastError" in a ping/has reply), or ''
+  function recentWhy(r) {
+    var e = r && r.lastError;
+    return e && e.message && e.ageSec <= 600 ? String(e.message) : '';
+  }
+
   // one request -> { ok, ... } in either mode
   function ask(conf, body) {
     if (conf.mode !== 'blind') return postRead(conf, body);
@@ -115,7 +122,8 @@
       .then(function () { return jsonp(conf, { action: 'has', ids: ids.join(',') }); })
       .then(function (r) {
         if (!r || !r.ok) return r;                                           // e.g. wrong key: readable through the script tag
-        return { ok: true, results: body.bills.map(function (b) { return r.has && r.has[b.id] ? { id: b.id } : { id: b.id, error: 'The sheet did not accept this bill.' }; }) };
+        var why = recentWhy(r);                                              // blind mode cannot read the POST reply, but the script keeps its last error
+        return { ok: true, results: body.bills.map(function (b) { return r.has && r.has[b.id] ? { id: b.id } : { id: b.id, error: why ? 'The script reported: ' + why : 'The sheet did not accept this bill.' }; }) };
       });
   }
 
@@ -228,6 +236,31 @@
     return Store.enqueueAll().then(function (added) { return refresh().then(function () { emit(); return sync(true); }).then(function () { return { added: added }; }); });
   }
 
+  // Fresh start, sheet side: ask the script to remove every bill row. Resolves when the sheet is confirmed empty.
+  // Rejects (so nothing is deleted anywhere) when it cannot be done, e.g. the script is an older version without "clear".
+  function clearSheet() {
+    if (!st.conf) return Promise.resolve({ skipped: true });
+    var conf = st.conf, OLD = 'Your Google script is an older version without "clear". Paste the latest Code.gs into it, then Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy.';
+    if (conf.mode === 'blind') {
+      return postBlind(conf, { action: 'clear' }).then(function () { return jsonp(conf, { action: 'ping' }); }).then(function (r) {
+        if (!r || !r.ok) throw fail('script', friendly(r && r.error), false);
+        if (r.bills !== 0) throw fail('script', recentWhy(r) ? 'The Google script reported an error: ' + recentWhy(r) : OLD, false);
+        return { cleared: true };
+      });
+    }
+    return postRead(conf, { action: 'clear' }).then(function (r) {
+      if (r && r.error === 'unknown action') throw fail('script', OLD, false);
+      if (!r || !r.ok) throw fail('script', friendly(r && r.error), false);
+      return { cleared: true, rows: r.cleared };
+    });
+  }
+
+  // After the bills on this device were wiped: forget any waiting/failed state and refresh the screens.
+  function refreshStatus() {
+    clearTimeout(st.timer); st.timer = null; st.tries = 0; st.error = ''; st.fatal = false;
+    return refresh().then(emit);
+  }
+
   function kick() { return sync(); }
 
   function init() {
@@ -237,7 +270,7 @@
   }
 
   root.Cloud = {
-    init: init, connect: connect, disconnect: disconnect, sendAll: sendAll, syncNow: function () { return sync(true); }, kick: kick,
+    init: init, connect: connect, disconnect: disconnect, sendAll: sendAll, clearSheet: clearSheet, refreshStatus: refreshStatus, syncNow: function () { return sync(true); }, kick: kick,
     status: status, onChange: function (fn) { st.listeners.push(fn); }, settings: cfg
   };
 })(typeof window !== 'undefined' ? window : this);

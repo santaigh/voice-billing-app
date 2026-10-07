@@ -9,19 +9,25 @@ const os = require('os');
 
 // ---------------------------------------------------------------- the stand-in script
 function startMock(cors, port) {
-  const state = { bills: [], posts: [], gets: [], preflights: 0, down: false, hang: false, dropReply: 0, key: 'SECRET', refuseTotal: null, echo: {}, n: 0 };
+  const state = { bills: [], posts: [], gets: [], preflights: 0, down: false, hang: false, dropReply: 0, key: 'SECRET', refuseTotal: null, echo: {}, n: 0, crash: false, noClear: false, lastError: null };
   const base = 'http://localhost:' + port;
   const origin = res => { if (cors) res.setHeader('Access-Control-Allow-Origin', '*'); };
 
   function handle(body) {
     if (body.key !== state.key) return { ok: false, error: 'bad key' };
-    if (body.action === 'ping') return { ok: true, url: 'https://docs.example/sheet', bills: state.bills.length };
+    if (body.action === 'ping') return Object.assign({ ok: true, url: 'https://docs.example/sheet', bills: state.bills.length }, state.lastError ? { lastError: state.lastError } : {});
+    if (body.action === 'clear') {
+      if (state.noClear) return { ok: false, error: 'unknown action' };
+      const n = state.bills.length; state.bills = []; state.lastError = null;
+      return { ok: true, cleared: { bills: n, items: 0 } };
+    }
+    if (body.action === 'bills' && state.crash) { state.lastError = { action: 'bills', message: 'boom', ageSec: 2 }; return { ok: false, error: 'script error: boom' }; }
     if (body.action === 'bills') {
       const results = body.bills.map(b => {
         if (!/^\d{8}-\d{3,}$/.test(b.id) || b.id.slice(0, 8) !== b.date.slice(8) + b.date.slice(5, 7) + b.date.slice(0, 4)) return { id: b.id, error: 'bad bill id' };
         if (state.refuseTotal !== null && b.total === state.refuseTotal) return { id: b.id, error: 'bad total' };
         if (state.bills.some(x => x.id === b.id)) return { id: b.id, duplicate: true };
-        state.bills.push(b);
+        state.bills.push(b); state.lastError = null;
         return { id: b.id, sl: state.bills.length };
       });
       return { ok: true, added: results.filter(r => r.sl).length, results };
@@ -56,8 +62,8 @@ function startMock(cors, port) {
       if (!q.action) { origin(res); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: true, service: 'shop-billing-sync' })); return; }
       let out;
       if (q.key !== state.key) out = { ok: false, error: 'bad key' };
-      else if (q.action === 'ping') out = { ok: true, url: 'https://docs.example/sheet', bills: state.bills.length };
-      else if (q.action === 'has') { const has = {}; (q.ids || '').split(',').filter(Boolean).forEach(i => { has[i] = state.bills.some(b => b.id === i); }); out = { ok: true, has }; }
+      else if (q.action === 'ping') out = Object.assign({ ok: true, url: 'https://docs.example/sheet', bills: state.bills.length }, state.lastError ? { lastError: state.lastError } : {});
+      else if (q.action === 'has') { const has = {}; (q.ids || '').split(',').filter(Boolean).forEach(i => { has[i] = state.bills.some(b => b.id === i); }); out = Object.assign({ ok: true, has }, state.lastError ? { lastError: state.lastError } : {}); }
       else out = { ok: false, error: 'unknown action' };
       res.writeHead(200, { 'Content-Type': 'application/javascript' }); res.end(q.callback + '(' + JSON.stringify(out) + ');'); return;
     }
@@ -230,6 +236,48 @@ async function run(browser, cors, port, shots) {
   const ids = sentIds(), all = await stored();
   assert.strictEqual(new Set(ids).size, ids.length); assert.strictEqual(all.length, 8);
   assert.deepStrictEqual(ids.slice().sort(), all.map(labelOf).sort());
+
+  // ---- 11b. the script fails inside: its real reason reaches the status line, in both modes ----
+  st.crash = true;
+  await confirm('maida');
+  await until(async () => /boom/.test(await line()), 6000, 'the script error to be shown');
+  assert.match(await line(), cors ? /The Google script reported an error: boom/ : /1 bill could not be sent: The script reported: boom/);
+  st.crash = false;
+  await page.click('#cloud-now');
+  await until(() => st.bills.length === 9, 6000, 'the bill after the script is fixed');
+  await until(async () => (await outbox()).length === 0, 4000, 'list empty');
+  assert.match(await line(), /up to date/);
+
+  // ---- 11c. fresh start: the sheet is cleared first, then this device; the same numbers can be used again ----
+  await page.click('#tab-bills'); await page.evaluate(() => Bills.refresh());
+  await page.click('#bills-delete');
+  assert.ok(await page.locator('#delete-sheet-row').isVisible()); assert.ok(await page.locator('#delete-sheet').isChecked(), 'ticked by default');
+  assert.match(await page.textContent('#delete-sheet-row'), /skipped as a duplicate/);
+  // (a) an older script without "clear": nothing is deleted anywhere, and it says what to do
+  st.noClear = true;
+  await page.fill('#delete-confirm', 'DELETE'); await page.click('#delete-go');
+  await until(async () => /older version/.test(await page.textContent('#delete-msg')), 6000, 'the older-script message');
+  assert.match(await page.textContent('#delete-msg'), /Nothing was deleted/);
+  assert.strictEqual((await stored()).length, 9); assert.strictEqual(st.bills.length, 9);
+  assert.ok(await page.locator('#delete-overlay').isVisible()); assert.ok(await page.locator('#delete-go').isEnabled(), 'can try again');
+  // (b) the real thing
+  st.noClear = false;
+  await page.click('#delete-go');
+  await until(async () => (await stored()).length === 0, 8000, 'the bills on this device to go');
+  assert.strictEqual(st.bills.length, 0, 'the sheet was cleared too');
+  assert.deepStrictEqual(await outbox(), []);
+  assert.strictEqual((await statusOf()).connected, true, 'the Google Sheet connection stays');
+  assert.match(await page.textContent('#bills-status'), /All bills deleted and the Google Sheet rows cleared\. The next bill is \d{8}-001/);
+  // (c) the first new bill is written - not skipped as a duplicate of an old one
+  await confirm('maida');
+  await until(() => st.bills.length === 1, 6000, 'the first bill after the fresh start');
+  assert.ok(/^\d{8}-001$/.test(st.bills[0].id)); await until(async () => (await outbox()).length === 0, 4000, 'list empty');
+  // (d) with the box un-ticked only this device is cleared and the sheet keeps its rows
+  await page.click('#tab-bills'); await page.evaluate(() => Bills.refresh());
+  await page.click('#bills-delete'); await page.uncheck('#delete-sheet'); await page.fill('#delete-confirm', 'DELETE'); await page.click('#delete-go');
+  await until(async () => (await stored()).length === 0, 6000, 'this device to be cleared');
+  assert.strictEqual(st.bills.length, 1, 'the sheet kept its row');
+  await page.click('#tab-products'); await page.click('#tab-bills');
 
   // ---- 12. Disconnect: nothing more is sent, the list is cleared ----
   await page.click('#tab-products');

@@ -61,6 +61,17 @@ Do **not** put it in GitHub or share it publicly; it only goes into the script i
 (you do **not** need to run `setup` again or re-enter the folder ID), Save, then **Deploy → Manage deployments → ✏️ Edit →
 Version: New version → Deploy**. The newer script adds the read-only confirmation requests used by blind mode.
 
+## Updating the script later
+Open the script, replace its code with the latest `cloud/Code.gs` (keep **your own** `FOLDER_ID` line; it only matters if you ever run `setup`
+on a brand-new project), Save, then **Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy**. The URL and the KEY stay the same.
+If Google shows an **Authorization required** screen when you run something, allow it again (Advanced → Go to … → Allow).
+You do **not** need to run `setup` again. The newer script adds the **clear** action used by *Delete all bills…* in the app,
+and records its last error so the app can show it.
+
+## Seeing what the script is doing
+In the script editor open **Executions** (left menu). Every request from the app is a row (`doPost` for bills, `doGet` for the read-only
+checks); click one to see its log. A failed row shows the error message. The app also quotes the script's last error on the Bills tab.
+
 ## Troubleshooting
 | You see | Do this |
 |---|---|
@@ -69,6 +80,8 @@ Version: New version → Deploy**. The newer script adds the read-only confirmat
 | Authorization screen keeps appearing | Finish **Advanced → Go to … (unsafe) → Allow** |
 | Opening the URL shows a Google sign-in / "page not found" | In **Deploy → Manage deployments**, edit the deployment: *Execute as* **Me**, *Who has access* **Anyone** |
 | You changed the script and nothing changed | **Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy** (the URL stays the same) |
+| `The script reported: …` / `The Google script reported an error: …` | The text after the colon is the script's own error. Open **Executions** for the full detail, fix it, then **Send now** on the Bills tab |
+| `Your Google script is an older version without "clear"` | Follow **Updating the script later** above, then try *Delete all bills…* again |
 | Wrong or leaked KEY | Project Settings (⚙) → **Script properties** → delete `KEY` → run `setup` (a new key is printed), then paste it into the app on every device |
 
 ## What the script refuses

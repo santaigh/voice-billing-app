@@ -9,7 +9,7 @@ let n = 0; const t = (name, fn) => { fn(); n++; console.log('ok -', name); };
 // ---------------------------------------------------------------- fakes
 function makeEnv(opts) {
   opts = opts || {};
-  const st = { spreadsheets: [], moved: [], props: {}, locks: { acquired: 0, released: 0 }, logs: [], uuid: 0, sheetId: 100, failSetValues: false,
+  const st = { spreadsheets: [], moved: [], props: {}, locks: { acquired: 0, released: 0 }, logs: [], uuid: 0, sheetId: 100, failSetValues: false, errors: [],
                folders: opts.folders || ['folder123'], parseDate: [] };
 
   class Range {
@@ -28,6 +28,7 @@ function makeEnv(opts) {
     }
     setNumberFormat(f) { return this.each(cell => { cell.format = f; }); }
     setFontWeight(w) { return this.each(cell => { cell.bold = w === 'bold'; }); }
+    clear() { return this.each(cell => { cell.value = ''; cell.formula = null; cell.format = null; cell.bold = false; }); }
   }
 
   class Sheet {
@@ -38,6 +39,7 @@ function makeEnv(opts) {
     getSheetId() { return this.id; }
     getLastRow() { let last = 0; Object.keys(this.cells).forEach(k => { const v = this.cells[k].value; if (v !== '' && v !== undefined && v !== null) last = Math.max(last, +k.split(',')[0]); }); return last; }
     getRange(r, c, nr, nc) { return new Range(this, r, c, nr, nc); }
+    getMaxColumns() { return 26; }
     setFrozenRows(x) { this.frozen = x; }
     setColumnWidth(c, w) { this.widths[c] = w; }
     row(r, cols) { const out = []; for (let c = 1; c <= (cols || 7); c++) out.push(this.cells[r + ',' + c] ? this.cells[r + ',' + c].value : ''); return out; }
@@ -61,7 +63,7 @@ function makeEnv(opts) {
     getFolderById(id) { if (st.folders.indexOf(id) < 0) throw new Error('Folder not found: ' + id); return { id }; },
     getFileById(id) { return { moveTo(folder) { st.moved.push({ file: id, folder: folder.id }); } }; }
   };
-  const PropertiesService = { getScriptProperties() { return { getProperty: k => (k in st.props ? st.props[k] : null), setProperty: (k, v) => { st.props[k] = v; } }; } };
+  const PropertiesService = { getScriptProperties() { return { getProperty: k => (k in st.props ? st.props[k] : null), setProperty: (k, v) => { st.props[k] = v; }, deleteProperty: k => { delete st.props[k]; } }; } };
   const LockService = { getScriptLock() { return { waitLock() { st.locks.acquired++; }, releaseLock() { st.locks.released++; } }; } };
   const ContentService = {
     MimeType: { JSON: 'JSON', JAVASCRIPT: 'JAVASCRIPT' },
@@ -71,7 +73,7 @@ function makeEnv(opts) {
     getUuid() { const h = (++st.uuid * 2654435761 >>> 0).toString(16).padStart(8, '0'); return h + '-aaaa-4bbb-8ccc-' + h + h.slice(0, 4); },
     parseDate(s, tz, fmt) { st.parseDate.push([s, tz, fmt]); const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d) - 5.5 * 3600 * 1000); }   // midnight in Asia/Kolkata
   };
-  const sandbox = { console: { log: m => st.logs.push(String(m)) }, SpreadsheetApp, DriveApp, PropertiesService, LockService, ContentService, Utilities };
+  const sandbox = { console: { log: m => st.logs.push(String(m)), error: m => st.errors.push(String(m)) }, SpreadsheetApp, DriveApp, PropertiesService, LockService, ContentService, Utilities };
   return { st, sandbox };
 }
 
@@ -320,10 +322,69 @@ t('every write takes the lock and gives it back, even when something goes wrong 
   assert.deepStrictEqual([env.st.locks.acquired, env.st.locks.released], [3, 3]);
   env.st.failSetValues = true;                                                                  // the next write blows up
   const r = app.post({ key, action: 'bill', bill: bill('07102026-003', '2026-10-07', 84, [MAIDA]) });
-  assert.strictEqual(r.ok, false);
+  assert.deepStrictEqual(r, { ok: false, error: 'script error: boom' });
   assert.deepStrictEqual([env.st.locks.acquired, env.st.locks.released], [4, 4], 'lock released after the failure');
   const retry = app.post({ key, action: 'bill', bill: bill('07102026-003', '2026-10-07', 84, [MAIDA]) });
   assert.strictEqual(retry.ok, true); assert.strictEqual(bills.cells['4,3'].value, '07102026-003');
+});
+
+// ---------------------------------------------------------------- fresh start + visible errors
+t('clear removes every bill row from both tabs, keeps the headings, and the next bill starts again at Sl No 1', () => {
+  const { app, key, bills, items } = ready();
+  app.post({ key, action: 'bill', bill: bill('07102026-001', '2026-10-07', 132, [MAIDA, SUGAR]) });
+  app.post({ key, action: 'bill', bill: bill('07102026-002', '2026-10-07', 84, [MAIDA]) });
+  app.post({ key, action: 'bill', bill: bill('05102026-001', '2026-10-05', 10.1) });
+  const r = app.post({ key, action: 'clear' });
+  assert.deepStrictEqual(r, { ok: true, cleared: { bills: 3, items: 6 } });
+  assert.deepStrictEqual([bills.getLastRow(), items.getLastRow()], [1, 1]);
+  assert.deepStrictEqual(bills.row(1, 4), ['Sl No', 'Date', 'Bill ID', 'Grand Total']);
+  assert.deepStrictEqual(items.row(1, 7), ['Bill ID', 'SNo', 'Amt', 'Product name', 'Qty', 'T. Amount', 'Back']);
+  assert.ok(bills.cells['1,1'].bold && items.cells['1,1'].bold, 'headings keep their look');
+  // the SAME Bill ID can be written again (it is no longer "a duplicate"), numbered from 1, items from row 2
+  const again = app.post({ key, action: 'bill', bill: bill('07102026-001', '2026-10-07', 132, [MAIDA, SUGAR]) });
+  assert.deepStrictEqual(again.result, { id: '07102026-001', sl: 1, itemsRow: 2 });
+  assert.strictEqual(items.cells['4,1'].bold, true); assert.strictEqual(items.cells['6,1'].bold, false);
+  assert.deepStrictEqual(app.post({ key, action: 'clear' }), { ok: true, cleared: { bills: 1, items: 3 } });
+  assert.deepStrictEqual(app.post({ key, action: 'clear' }), { ok: true, cleared: { bills: 0, items: 0 } });   // empty sheet: fine
+});
+
+t('clear needs the KEY, takes the lock, and a wrong key deletes nothing', () => {
+  const { env, app, key, bills } = ready();
+  app.post({ key, action: 'bill', bill: bill('07102026-001', '2026-10-07', 84, [MAIDA]) });
+  const locks = env.st.locks.acquired;
+  assert.deepStrictEqual(app.post({ action: 'clear' }), { ok: false, error: 'bad key' });
+  assert.deepStrictEqual(app.post({ key: 'x'.repeat(64), action: 'clear' }), { ok: false, error: 'bad key' });
+  assert.strictEqual(bills.getLastRow(), 2); assert.strictEqual(env.st.locks.acquired, locks);
+  app.post({ key, action: 'clear' });
+  assert.deepStrictEqual([env.st.locks.acquired, env.st.locks.released], [locks + 1, locks + 1]);
+  assert.strictEqual(app.getRaw({ action: 'clear', key, callback: 'f' }).mime, 'JAVASCRIPT');                 // GET can never clear
+  assert.deepStrictEqual(unwrap(app.getRaw({ action: 'clear', key, callback: 'f' }), 'f'), { ok: false, error: 'unknown action' });
+});
+
+t('a failure inside the script is recorded, answered, and shown to GET ping/has with a valid KEY only', () => {
+  const { env, app, key } = ready();
+  env.st.failSetValues = true;
+  const r = app.post({ key, action: 'bills', bills: [bill('07102026-001', '2026-10-07', 84, [MAIDA])] });
+  assert.deepStrictEqual(r, { ok: false, error: 'script error: boom' });
+  const saved = JSON.parse(env.st.props.LAST_ERROR);
+  assert.deepStrictEqual([saved.action, saved.message], ['bills', 'boom']); assert.ok(!isNaN(Date.parse(saved.at)));
+  assert.ok(env.st.errors.some(e => /action bills/.test(e) && /boom/.test(e)), 'also written to the Executions log');
+  const ping = unwrap(app.getRaw({ action: 'ping', key, callback: 'f' }), 'f');
+  assert.deepStrictEqual([ping.lastError.action, ping.lastError.message], ['bills', 'boom']); assert.ok(ping.lastError.ageSec >= 0 && ping.lastError.ageSec < 30);
+  const has = unwrap(app.getRaw({ action: 'has', key, ids: '07102026-001', callback: 'f' }), 'f');
+  assert.deepStrictEqual([has.has['07102026-001'], has.lastError.message], [false, 'boom']);
+  assert.ok(!('lastError' in unwrap(app.getRaw({ action: 'ping', key: 'wrong', callback: 'f' }), 'f')), 'not shown without the key');
+  assert.strictEqual(app.post({ key, action: 'ping' }).lastError.message, 'boom');                              // POST ping too
+  // it is forgotten once something is written fine
+  assert.strictEqual(app.post({ key, action: 'bills', bills: [bill('07102026-001', '2026-10-07', 84, [MAIDA])] }).added, 1);
+  assert.ok(!('LAST_ERROR' in env.st.props)); assert.ok(!('lastError' in unwrap(app.getRaw({ action: 'ping', key, callback: 'f' }), 'f')));
+});
+
+t('a lock that cannot be obtained is reported as a script error, not as "bad request"', () => {
+  const { env, app, key } = ready();
+  env.sandbox.LockService = { getScriptLock() { return { waitLock() { throw new Error('Could not obtain lock after 30000 milliseconds.'); }, releaseLock() {} }; } };
+  const r = app.post({ key, action: 'bill', bill: bill('07102026-001', '2026-10-07', 84, [MAIDA]) });
+  assert.deepStrictEqual(r, { ok: false, error: 'script error: Could not obtain lock after 30000 milliseconds.' });
 });
 
 console.log(n + ' tests passed');

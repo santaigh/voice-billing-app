@@ -59,5 +59,11 @@ Write down anything that does not match and send it back.
       the bill appears in the sheet by itself, **once**.
 - [ ] Note anything odd: a wrong date or number format, a missing row, a duplicate, a message you did not understand.
 
+## 8. Fresh start (only when you want to wipe your test bills)
+- [ ] Bills tab → **Delete all bills…**. Read what it says; tap **Export to Excel first** if you want a copy.
+- [ ] Leave **Also clear the rows in the Google Sheet** ticked, type `DELETE`, tap **Delete all bills**.
+- [ ] Both tabs of the Google Sheet are empty except their headings; the Bills tab says "No bills in this period".
+- [ ] Confirm a new bill: it is numbered `…-001` and appears as the first row in the sheet.
+
 ## What to send back
 Printer model · normal or blind mode · anything cut off or garbled on the receipt · voice misses (said vs heard) · anything confusing.

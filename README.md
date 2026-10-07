@@ -29,6 +29,18 @@ box → paste the Web app URL and the KEY → Save & test → Send all existing 
   any it already has. Bills saved before items were kept appear on the Bills tab only.
 - The URL and the KEY are stored on the device only — never in this repo. Your Drive folder ID is typed into the script by you.
 - The app's own **Export to Excel** (two sheets, works offline) stays as a second backup.
+- **If the sheet does not take a bill, the app says why.** The script records its last error (Apps Script → **Executions** shows it too)
+  and the status line quotes it — in blind mode as `The script reported: …`.
+
+## Delete all bills (fresh start)
+
+Bills tab → small red **Delete all bills…** link. The dialog says how many bills go and where the numbering restarts, offers
+**Export to Excel first**, and — when the Google Sheet is connected — a ticked box **Also clear the rows in the Google Sheet**.
+The red button stays disabled until you type `DELETE`. The sheet is cleared **first**: if that fails (for example the script is an
+older version without `clear`), nothing is deleted anywhere and the dialog says what to do. Deleted: every bill on this device,
+the to-send list, the bill-number counters and the "exported" marks. **Kept:** products, shop name, the Google Sheet connection.
+Leave the sheet box un-ticked only if you also clear its rows yourself: old rows left in the sheet make a new bill with the same
+number look like a duplicate, so it would be skipped and never written. **This cannot be undone.**
 
 ## Publishing
 

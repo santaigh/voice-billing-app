@@ -221,9 +221,26 @@
     });
   }
 
+  // Fresh start: every saved bill, the to-send list, the bill-number counters and the "exported" marks go, in one
+  // transaction (all or nothing). Kept: products, shop name, the Google Sheet connection, the saved language.
+  function clearBills() {
+    return open().then(function (db) {
+      var tx = db.transaction(['bills', 'outbox', 'meta'], 'readwrite'), meta = tx.objectStore('meta');
+      tx.objectStore('bills').clear();
+      tx.objectStore('outbox').clear();
+      meta.openCursor().onsuccess = function (e) {
+        var cur = e.target.result;
+        if (!cur) return;
+        if (String(cur.key).indexOf('counter') === 0 || cur.key === 'exported') cur.delete();    // 'counter' (old) and 'counter:<date>'
+        cur.continue();
+      };
+      return done(tx).then(function () { db.close(); });
+    });
+  }
+
   root.Store = { saveProducts: saveProducts, loadProducts: loadProducts, saveBill: saveBill, loadBills: loadBills,
                  getExported: getExported, markExported: markExported,
                  getCloud: getCloud, setCloud: setCloud, clearCloud: clearCloud, listOutbox: listOutbox, removeOutbox: removeOutbox,
-                 patchOutbox: patchOutbox, enqueueAll: enqueueAll,
+                 patchOutbox: patchOutbox, enqueueAll: enqueueAll, clearBills: clearBills,
                  getShop: getShop, setShop: setShop };
 })(window);

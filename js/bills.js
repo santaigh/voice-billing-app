@@ -65,6 +65,7 @@
     $('bills-summary').textContent = shown.length ? span + plural(shown.length, 'bill') + ' · ₹ ' + Bill.formatMoney(sum) : '';
     $('bills-empty').hidden = shown.length > 0;
     $('bills-export').disabled = shown.length === 0;
+    $('bills-delete').disabled = all.length === 0;                        // deletes EVERYTHING, whatever range is shown
     $('bills-export').textContent = shown.length ? 'Export to Excel (' + plural(shown.length, 'bill') + ')' : 'Export to Excel';
 
     var list = $('bills-list');
@@ -226,8 +227,61 @@
     if (s.sheetUrl) open.href = s.sheetUrl;
   }
 
+  // ---- Delete all bills (fresh start) ----
+  function deleteMsg(text, kind) {
+    var m = $('delete-msg');
+    m.textContent = text;
+    m.className = 'status ' + (kind || '');
+    m.hidden = !text;
+  }
+
+  function confirmTyped() { return $('delete-confirm').value.trim().toUpperCase() === 'DELETE'; }
+
+  function openDelete() {
+    var cloud = Cloud.status().connected, today = Bill.localDate(new Date());
+    $('delete-what').textContent = 'This permanently deletes ' + (all.length === 1 ? '1 bill' : all.length + ' bills') + ' saved on this device, and the bill numbers start again at ' +
+      Bill.billNo(today, 1) + '. It cannot be undone.';
+    $('delete-sheet-row').hidden = !cloud;
+    $('delete-sheet').checked = true;
+    $('delete-confirm').value = '';
+    $('delete-go').disabled = true;
+    deleteMsg('');
+    $('delete-overlay').hidden = false;
+    $('delete-confirm').focus();
+  }
+
+  function closeDelete() { $('delete-overlay').hidden = true; }
+
+  function doDelete() {
+    if (!confirmTyped()) return;
+    var wantSheet = Cloud.status().connected && $('delete-sheet').checked, sheetDone = false;
+    $('delete-go').disabled = true; $('delete-cancel').disabled = true;
+    deleteMsg(wantSheet ? 'Clearing the Google Sheet, then this device…' : 'Deleting…', '');
+    // The sheet goes first: if it cannot be cleared, nothing is deleted anywhere and the owner can try again.
+    (wantSheet ? Cloud.clearSheet() : Promise.resolve()).then(function () {
+      sheetDone = wantSheet;
+      return Store.clearBills();
+    }).then(function () {
+      Billing.forget();
+      return Cloud.refreshStatus();
+    }).then(refresh).then(function () {
+      closeDelete();
+      status('All bills deleted' + (sheetDone ? ' and the Google Sheet rows cleared' : '') + '. The next bill is ' + Bill.billNo(Bill.localDate(new Date()), 1) + '.', 'ok');
+    }, function (err) {
+      deleteMsg((sheetDone ? 'The Google Sheet rows were cleared, but deleting the bills on this device failed: ' : '') + (err && err.message ? err.message : 'Something went wrong.') +
+        (sheetDone ? '' : ' Nothing was deleted.'), 'bad');
+      $('delete-go').disabled = !confirmTyped();
+    }).then(function () { $('delete-cancel').disabled = false; });
+  }
+
   function init() {
     var today = Bill.localDate(new Date());
+    $('bills-delete').addEventListener('click', openDelete);
+    $('delete-cancel').addEventListener('click', closeDelete);
+    $('delete-confirm').addEventListener('input', function () { $('delete-go').disabled = !confirmTyped(); });
+    $('delete-go').addEventListener('click', doDelete);
+    $('delete-export').addEventListener('click', function () { exportBills(Export.sortBills(all)); deleteMsg('The Excel file was downloaded. Check your Downloads folder, then type DELETE.', 'ok'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('delete-overlay').hidden && !$('delete-cancel').disabled) closeDelete(); });
     Cloud.onChange(paintCloud); paintCloud(Cloud.status());
     $('cloud-now').addEventListener('click', function () { Cloud.syncNow(); });
     setRange(today, today);

@@ -415,6 +415,8 @@
   window.Billing = {
     init: init,
     setShop: function (name) { shopName = name; },
+    // After a fresh start: "print bill" must not reprint a bill that was just deleted.
+    forget: function () { lastReceipt = null; hideSaved(); },
     // Print any saved bill (used by the Bills tab). Returns false for a bill saved before items were kept.
     printBill: function (b) {
       if (!b || !b.items || !b.items.length) return false;
