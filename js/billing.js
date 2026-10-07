@@ -11,10 +11,10 @@
   }
 
   var TRASH = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M9 3a1 1 0 0 0-1 1v1H4.5a1 1 0 1 0 0 2H5l.8 12.1A2 2 0 0 0 7.8 21h8.4a2 2 0 0 0 2-1.9L19 7h.5a1 1 0 1 0 0-2H16V4a1 1 0 0 0-1-1H9zm1 2h4v0H10V5zM9.5 10a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1zm5 0a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1z"/></svg>';
-  var CONFIRM_SECONDS = 3, UNDO_MS = 7000;
+  var CONFIRM_SECONDS = 3, UNDO_MS = 7000, SAVED_MS = 60000;
 
   var products = [], cart = [], shopName = '', busy = false, matchIndex = null, liveCtl = null;
-  var undoState = null, undoTimer = null, confirmTimer = null, confirmLeft = 0, lastReceipt = null;
+  var undoState = null, undoTimer = null, confirmTimer = null, confirmLeft = 0, lastReceipt = null, savedTimer = null;
 
   // ---- search (typing) and the suggestion list ----
   // entries: [{ p, hint, pick }]. Used for typed results and for voice suggestions alike.
@@ -152,7 +152,6 @@
     $('bill-total').textContent = Bill.formatMoney(sum);
     $('bill-foot-total').textContent = Bill.formatMoney(sum);
     $('bill-table').hidden = cart.length === 0;
-    $('bill-empty').hidden = cart.length > 0;
     $('bill-generate').disabled = !allOk || busy;
     var bad = cart.length > 0 && !allOk;
     $('bill-msg').hidden = !bad;
@@ -232,16 +231,31 @@
     Store.saveBill(totalPaise / 100, now).then(function (bill) {
       lastReceipt = { bill: bill, now: now, lines: lines, totalPaise: totalPaise };
       cart = []; render(); hideUndo();
-      $('last-bill-text').textContent = 'Last bill ' + bill.billNo + ' · ₹ ' + Bill.formatMoney(totalPaise);
-      $('last-bill').hidden = false;
-      setHeard('Bill ' + bill.billNo + ' saved. Ready for the next customer.', 'ok');
-      showReceipt(lastReceipt);
-      window.print();
+      showSaved(bill, totalPaise);                              // saved and closed: ready for the next customer; printing is a separate step
     }).catch(function () {
       $('bill-msg').hidden = false;
       $('bill-msg').className = 'status bad';
-      $('bill-msg').textContent = 'The bill could not be saved, so nothing was printed. Your items are still here — try again.';
+      $('bill-msg').textContent = 'The bill could not be saved. Your items are still here — try again.';
     }).then(function () { busy = false; updateTotals(); });
+  }
+
+  // ---- bill saved: print on request ("print bill" or the Print button) ----
+  function showSaved(bill, totalPaise) {
+    $('saved-text').textContent = 'Bill ' + bill.billNo + ' saved · ₹ ' + Bill.formatMoney(totalPaise) + ' — say “print bill”';
+    $('saved-bar').hidden = false;
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(hideSaved, SAVED_MS);
+  }
+
+  function hideSaved() { clearTimeout(savedTimer); $('saved-bar').hidden = true; }
+
+  // Prints the last CONFIRMED bill, never the one still being built.
+  function printLast() {
+    if (!lastReceipt) { setHeard('No confirmed bill to print yet. Say “bill confirm” first.', 'warn'); return; }
+    hideSaved();
+    setHeard('Printing bill ' + lastReceipt.bill.billNo + '…', 'ok');
+    showReceipt(lastReceipt);
+    window.print();
   }
 
   function showReceipt(r) {
@@ -275,7 +289,7 @@
   }
 
   // ---- live voice ----
-  var LIVE_HINT = '● LIVE — say a product, e.g. “Maida 2 kg”. Say “bill confirm” to finish the bill.';
+  var LIVE_HINT = '● LIVE — say a product, e.g. “Maida 2 kg”. “Bill confirm” saves the bill, “print bill” prints it.';
   var VOICE_ERRORS = {
     'not-allowed': 'The microphone is blocked. Allow it for this site in Chrome settings, then tap the mic again.',
     'service-not-allowed': 'The microphone is blocked. Allow it for this site in Chrome settings, then tap the mic again.',
@@ -309,6 +323,7 @@
     if (!$('receipt-overlay').hidden) return;                     // receipt still open: not for the next customer yet
     if (confirmTimer && Parse.isCancel(alts)) { stopConfirm(''); setHeard('Cancelled. The bill is still open.', 'ok'); return; }
     if (Parse.isConfirm(alts)) { requestConfirm(); return; }
+    if (Parse.isPrint(alts)) { printLast(); return; }
 
     var parsed = null, dec = { candidates: [], auto: null };
     for (var i = 0; i < alts.length && !dec.candidates.length; i++) {
@@ -379,7 +394,7 @@
     $('confirm-cancel').addEventListener('click', function () { stopConfirm(''); setHeard('Cancelled. The bill is still open.', 'ok'); });
     $('receipt-print').addEventListener('click', function () { window.print(); });
     $('receipt-new').addEventListener('click', closeReceipt);
-    $('last-bill-reprint').addEventListener('click', function () { if (lastReceipt) { showReceipt(lastReceipt); window.print(); } });
+    $('saved-print').addEventListener('click', printLast);
     window.addEventListener('afterprint', function () { if (!$('receipt-overlay').hidden) closeReceipt(); });   // print dialog closed: back to billing
     render();
   }

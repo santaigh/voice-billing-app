@@ -185,6 +185,8 @@ const FAKE = () => {
   await page.click('#undo-btn');
 
   // ---------- 10. "bill confirm": countdown, cancel by voice, then really confirm ----------
+  await say('print bill');                                          // nothing confirmed yet: nothing to print
+  assert.match(await heard(), /No confirmed bill to print yet/); assert.strictEqual(await page.evaluate(() => window.__prints), 0);
   await say('confirm');                                             // one word alone does nothing
   assert.ok(await page.locator('#confirm-bar').isHidden());
   await say('bill confirm');
@@ -206,34 +208,48 @@ const FAKE = () => {
   await page.locator('#bill-cart .line').nth(0).locator('.l-qty').fill('2');
 
   await say('bill confirm');
-  await page.waitForSelector('#receipt-overlay:not([hidden])', { timeout: 6000 });
-  assert.strictEqual(await page.evaluate(() => window.__prints), 1);
+  await page.waitForSelector('#saved-bar:not([hidden])', { timeout: 6000 });
+  assert.strictEqual(await page.evaluate(() => window.__prints), 0, 'confirming saves and closes the bill; it does not print');
+  assert.ok(await page.locator('#receipt-overlay').isHidden());
   const today = await page.evaluate(() => Bill.localDate(new Date()));
   const no1 = today.replace(/-/g, '') + '-001';
-  assert.match(await page.textContent('#receipt-paper'), new RegExp('Bill No: ' + no1 + '[\\s\\S]*Maida[\\s\\S]*TOTAL[\\s\\S]*₹ 132\\.00'));
+  assert.match(await page.textContent('#saved-text'), new RegExp('Bill ' + no1 + ' saved · ₹ 132\\.00 — say “print bill”'));
   assert.strictEqual(await rows().count(), 0, 'the table is cleared for the next customer');
   assert.deepStrictEqual(await page.evaluate(() => Store.loadBills()), [{ billNo: no1, date: today, total: 132 }]);
   assert.strictEqual(await mic(), 'true', 'still live for the next customer');
-  await say('sugar 1 kg');                                          // receipt still open: not added to the next bill yet
-  assert.strictEqual(await rows().count(), 0);
-  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));   // the print dialog closes
-  assert.ok(await page.locator('#receipt-overlay').isHidden());
-  assert.match(await page.textContent('#last-bill-text'), new RegExp(no1 + ' · ₹ 132\\.00'));
-  await say('sugar 1 kg');                                          // next customer
-  assert.strictEqual(await rows().count(), 1); assert.strictEqual(await cell(0, '.c-sno').textContent(), '1'); assert.strictEqual(await total(), '48.00');
+  assert.strictEqual(await page.locator('#last-bill').count(), 0, 'no last-bill strip');
+
+  await say('onion 1 kg');                                          // next customer starts straight away
+  assert.strictEqual(await rows().count(), 1); assert.strictEqual(await cell(0, '.c-sno').textContent(), '1'); assert.strictEqual(await total(), '35.00');
   await page.screenshot({ path: shots + '/live-next.png' });
 
-  // empty bill: "bill confirm" says so; manual Generate Bill still works while live
+  // "print bill" prints the LAST CONFIRMED bill (Maida + Sugar, 132.00), never the bill still being built (Onion)
+  await say('print bill');
+  await page.waitForSelector('#receipt-overlay:not([hidden])');
+  assert.strictEqual(await page.evaluate(() => window.__prints), 1);
+  const paper = await page.textContent('#receipt-paper');
+  assert.match(paper, new RegExp('Bill No: ' + no1 + '[\\s\\S]*Maida[\\s\\S]*TOTAL[\\s\\S]*₹ 132\\.00')); assert.ok(!/Onion/.test(paper));
+  assert.ok(await page.locator('#saved-bar').isHidden());
+  assert.match(await heard(), new RegExp('Printing bill ' + no1));
+  await say('tomato 1 kg');                                         // receipt open: speech is ignored
+  assert.strictEqual(await rows().count(), 1);
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));   // the print dialog closes
+  assert.ok(await page.locator('#receipt-overlay').isHidden());
+  assert.strictEqual(await mic(), 'true'); assert.strictEqual(await rows().count(), 1, 'the open bill is untouched');
+
+  // empty bill: "bill confirm" says so; the Generate Bill button saves the same way (no print); then "print bill"
   await cell(0, '.l-remove').click();
   await say('bill confirm');
   assert.match(await heard(), /the bill is empty/); assert.ok(await page.locator('#confirm-bar').isHidden());
   await say('paneer');
   await page.click('#bill-generate');
+  await page.waitForSelector('#saved-bar:not([hidden])');
+  assert.strictEqual(await page.evaluate(() => window.__prints), 1, 'the button does not print either');
+  assert.match(await page.textContent('#saved-text'), /Bill \d+-002 saved · ₹ 90\.00/);
+  await say('print bill');
   await page.waitForSelector('#receipt-overlay:not([hidden])');
   assert.match(await page.textContent('#receipt-paper'), /Bill No: \d+-002[\s\S]*Paneer 200g[\s\S]*₹ 90\.00/);
-  await page.click('#receipt-new');
-  await page.click('#last-bill-reprint');                           // reprint the last bill
-  assert.strictEqual(await page.evaluate(() => window.__prints), 3);
+  assert.strictEqual(await page.evaluate(() => window.__prints), 2);
   await page.click('#receipt-new');
   assert.strictEqual(await mic(), 'true');
 

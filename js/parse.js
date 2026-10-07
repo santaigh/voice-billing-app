@@ -122,8 +122,12 @@
   function isConfirm(texts) {
     return anyText(texts, /(confirm|conform|கன்\S*ர்ம்)/) && anyText(texts, /(\bbills?\b|\bbuild\b|\bpill\b|பில்)/);
   }
+  // "print bill": prints the last confirmed bill. Both words required, like "bill confirm".
+  function isPrint(texts) {
+    return anyText(texts, /(\bprints?\b|\bprinted\b|பிரிண்ட்|பிரின்ட்)/) && anyText(texts, /(\bbills?\b|\bbuild\b|\bpill\b|பில்)/);
+  }
   function isCancel(texts) { return anyText(texts, /(\bcancel\b|ரத்து)/); }
 
-  var api = { parse: parse, qtyFor: qtyFor, isConfirm: isConfirm, isCancel: isCancel };
+  var api = { parse: parse, qtyFor: qtyFor, isConfirm: isConfirm, isPrint: isPrint, isCancel: isCancel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Parse = api;
 })(typeof window !== 'undefined' ? window : this);

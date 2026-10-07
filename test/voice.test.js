@@ -5,7 +5,7 @@ const Fuse = require('../vendor/fuse.min.js');
 const XLSX = require('../vendor/xlsx.full.min.js');
 const Catalog = require('../js/catalog.js');
 const Search = require('../js/search.js');
-const { parse, qtyFor, isConfirm, isCancel } = require('../js/parse.js');
+const { parse, qtyFor, isConfirm, isPrint, isCancel } = require('../js/parse.js');
 const Match = require('../js/match.js');
 let n = 0; const t = (name, fn) => { fn(); n++; console.log('ok -', name); };
 const P = (text, qty, unit, phrase) => assert.deepStrictEqual(parse(text), { qty, unit, phrase }, text);
@@ -126,6 +126,15 @@ t('"bill confirm" needs both words; "cancel" is separate', () => {
   assert.strictEqual(isConfirm([]), false);
   assert.strictEqual(isCancel(['cancel']), true); assert.strictEqual(isCancel(['please cancel it']), true);
   assert.strictEqual(isCancel(['maida']), false); assert.strictEqual(isCancel([]), false);
+});
+
+t('"print bill" needs both words and is not "bill confirm"', () => {
+  for (const ok of ['print bill', 'Print the bill', 'print bill please', 'printed bill', 'print build', 'பிரிண்ட் பில்'])
+    assert.strictEqual(isPrint([ok]), true, ok);
+  for (const no of ['print', 'bill', 'maida 2 kg', 'sugar', 'bill confirm', ''])
+    assert.strictEqual(isPrint([no]), false, no);
+  assert.strictEqual(isPrint([]), false);
+  assert.strictEqual(isConfirm(['print bill']), false);      // the two commands never overlap
 });
 
 t('auto-add only when exactly one product clearly IS what was said', () => {

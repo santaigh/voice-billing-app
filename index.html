@@ -26,11 +26,6 @@
       <p id="voice-heard" class="heard" role="status" hidden></p>
       <ul id="bill-results" class="results" hidden></ul>
       <p id="bill-nomatch" class="placeholder" hidden>No product matches that.</p>
-      <div id="last-bill" class="lastbill" hidden>
-        <span id="last-bill-text"></span>
-        <button id="last-bill-reprint" class="secondary" type="button">Reprint</button>
-      </div>
-      <p id="bill-empty" class="placeholder">Say a product, e.g. <b>“Maida 2 kg”</b>, or type it above. It appears here as the bill grows.</p>
       <table id="bill-table" class="billtable" hidden>
         <thead>
           <tr><th class="c-sno">SNo</th><th class="c-amt">Amt</th><th class="c-name">Product name</th><th class="c-qty">Qty</th><th class="c-total">T. Amount</th><th class="c-ops">Ops</th></tr>
@@ -45,6 +40,10 @@
         <div id="undo-bar" class="toast" hidden>
           <span id="undo-text"></span>
           <button id="undo-btn" class="toast-btn" type="button">Undo</button>
+        </div>
+        <div id="saved-bar" class="toast saved" role="status" hidden>
+          <span id="saved-text"></span>
+          <button id="saved-print" class="toast-btn" type="button">Print</button>
         </div>
         <div id="confirm-bar" class="toast confirm" role="alert" hidden>
           <span id="confirm-text"></span>

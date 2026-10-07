@@ -151,11 +151,10 @@ button.wide { width: 100%; }
 /* ---- live voice ---- */
 .livebar { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: #fdecec; color: #8f1d1d; font-weight: 600; }
 .heard.muted { background: transparent; color: var(--muted); padding: 4px 12px; font-size: .9rem; }
-.lastbill { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 6px 12px; border-radius: 8px; background: var(--ok-bg); font-size: .9rem; }
-.lastbill .secondary { min-height: 40px; padding: 0 14px; }
 
 /* ---- toasts above the Grand Total bar ---- */
 .toasts { position: fixed; left: 0; right: 0; bottom: 132px; z-index: 3; display: grid; gap: 6px; padding: 0 16px; pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 720px; margin: 0 auto; width: 100%; padding: 8px 8px 8px 14px; border-radius: 10px; background: #26302b; color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.3); }
 .toast.confirm { background: #8a5a00; }
+.toast.saved { background: #1f6f4a; }
 .toast-btn { flex: none; min-height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: rgba(255,255,255,.2); color: #fff; font: inherit; font-weight: 700; }

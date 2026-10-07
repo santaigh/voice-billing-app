@@ -61,9 +61,13 @@ microphone keeps cutting out. On Android each restart may play Chrome's small li
   units kg / gram / litre / ml / packet / piece (500 gram of a KG item becomes 0.5).
 - **"Bill confirm"** (both words — *"confirm"* alone does nothing) starts a **3-second countdown**
   ("Saving bill ₹ 132.00 in 3…"). Say **"cancel"**, tap **Cancel**, or change the bill (add, edit, delete) and it
-  is cancelled. Otherwise the bill is saved, the receipt is printed, the table is cleared and the mic stays live
-  for the next customer. A **Last bill … Reprint** strip keeps the previous receipt one tap away. **Generate Bill**
-  does the same immediately, without the countdown.
+  is cancelled. Otherwise the bill is **saved and closed**, the table is cleared and the mic stays live for the next
+  customer. It does **not** print by itself. **Generate Bill** does the same immediately, without the countdown.
+- **"Print bill"** (both words) prints the **last confirmed bill** — never the one still being built. A small green
+  "Bill 20261007-001 saved … say “print bill”" bar with a **Print** button appears after each confirm (it
+  disappears after a minute or once printed; saying "print bill" works as long as the page stays open).
+  Only the most recent confirmed bill can be printed: lines are not stored, so confirm the next bill *before*
+  printing the previous one and the previous receipt is gone.
 - While the receipt screen is open, speech is ignored; it closes when the print dialog closes (or tap **New bill**).
 - **EN / தமிழ்** picks the speech language (not changeable while live).
 - Speech recognition is the browser's own (Chrome sends audio to Google's service), so it **needs internet** and

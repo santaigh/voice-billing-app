@@ -29,7 +29,9 @@ Write down anything that does not match and send it back.
 - [ ] **Leave it live for 5+ minutes** with some quiet gaps and shop noise. Note: does it keep listening? how often
       does Chrome beep / restart? does the screen stay on? does it add things from background talk?
 - [ ] Say "bill confirm". Good: "Saving bill ₹ … in 3…"; say "cancel" and it stops. Say it again and wait: the bill
-      is saved, the print dialog opens, and after printing you are back on an empty bill with the mic still live.
+      is saved and the table clears (no printing yet), with the mic still live for the next customer.
+- [ ] Now say "print bill". Good: the print dialog opens for the bill you just confirmed. (The green **Print**
+      button does the same if the voice command is missed.)
 - [ ] Switch to **தமிழ்** and repeat with the names your customers use. Put the spoken names that matter into the
       `aliases` column and load the sheet again.
 

@@ -68,7 +68,7 @@ const os = require('os');
   await page.fill('#bill-search', 'maggi'); await page.press('#bill-search', 'Enter');
   assert.strictEqual(await total(), '26.50');
 
-  // a failing save: nothing printed, cart kept, message shown
+  // a failing save: cart kept, message shown, nothing saved
   await page.evaluate(() => { window.__realSave = Store.saveBill; Store.saveBill = () => Promise.reject(new Error('disk full')); });
   await generate.click();
   await page.waitForFunction(() => /could not be saved/.test(document.getElementById('bill-msg').textContent));
@@ -78,12 +78,20 @@ const os = require('os');
   assert.ok(await generate.isEnabled(), 'can retry');
   await page.evaluate(() => { Store.saveBill = window.__realSave; });
 
-  // generate: receipt shown, printed once, cart cleared, bill saved as {billNo, date, total}
+  // generate: saved and closed (cart cleared) but NOT printed; printing is a separate step
   await generate.click();
-  await page.waitForSelector('#receipt-overlay:not([hidden])');
-  assert.strictEqual(await page.evaluate(() => window.__prints), 1);
+  await page.waitForSelector('#saved-bar:not([hidden])');
+  assert.strictEqual(await page.evaluate(() => window.__prints), 0, 'confirming does not print');
+  assert.ok(await page.locator('#receipt-overlay').isHidden());
   const today = await page.evaluate(() => Bill.localDate(new Date()));
   const no1 = today.replace(/-/g, '') + '-001';
+  assert.match(await page.textContent('#saved-text'), new RegExp('Bill ' + no1 + ' saved · ₹ 26\\.50 — say “print bill”'));
+  assert.strictEqual(await page.locator('#bill-cart .line').count(), 0);
+  assert.strictEqual(await page.locator('#last-bill').count(), 0, 'no last-bill strip any more');
+  await page.click('#saved-print');                               // the tap alternative to saying "print bill"
+  await page.waitForSelector('#receipt-overlay:not([hidden])');
+  assert.strictEqual(await page.evaluate(() => window.__prints), 1);
+  assert.ok(await page.locator('#saved-bar').isHidden());
   const receipt = await page.textContent('#receipt-paper');
   assert.match(receipt, /\d{2}-\d{2}-\d{4} \d{2}:\d{2}/, 'receipt date reads DD-MM-YYYY HH:MM');
   for (const want of ['Arul Stores', 'Bill No: ' + no1, 'Sugar', '0.25 KG × 50.00', 'Maggi', '1 PKT × 14.00', 'TOTAL', '₹ 26.50'])
@@ -97,6 +105,9 @@ const os = require('os');
   // second bill gets -002; stored records hold exactly three fields
   await page.fill('#bill-search', 'salt'); await page.press('#bill-search', 'Enter');
   await generate.click();
+  await page.waitForSelector('#saved-bar:not([hidden])');
+  assert.match(await page.textContent('#saved-text'), new RegExp('Bill ' + today.replace(/-/g, '') + '-002 saved'));
+  await page.click('#saved-print');
   await page.waitForSelector('#receipt-overlay:not([hidden])');
   assert.match(await page.textContent('#receipt-paper'), new RegExp('Bill No: ' + today.replace(/-/g, '') + '-002'));
   await page.click('#receipt-new');
@@ -108,6 +119,8 @@ const os = require('os');
   await page.reload(); await page.click('#tab-billing');
   await page.fill('#bill-search', 'salt'); await page.press('#bill-search', 'Enter');
   await page.click('#bill-generate');
+  await page.waitForSelector('#saved-bar:not([hidden])');
+  await page.click('#saved-print');
   await page.waitForSelector('#receipt-overlay:not([hidden])');
   assert.match(await page.textContent('#receipt-paper'), new RegExp('Arul Stores[\\s\\S]*' + today.replace(/-/g, '') + '-003'));
   await page.click('#receipt-new');
