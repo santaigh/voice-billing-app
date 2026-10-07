@@ -12,6 +12,9 @@ its price, and a bill is printed on a 58mm thermal printer. Android Chrome is th
 `.github/workflows/pages.yml` runs the unit tests and then publishes the app files (not `test/` or `tools/`) to
 GitHub Pages on every push to the default branch. One-time setup, in the GitHub repo: **Settings → Pages →
 Build and deployment → Source: GitHub Actions**. The address is `https://<user>.github.io/voice-billing-app/`.
+The app's service worker is network-first: online, every load gets the newest files; offline (or on a connection
+slower than 3 seconds) it uses the saved copy.
+
 Pages needs an `https://` address, which the microphone also requires. The app uses only relative URLs, so it
 works under that sub-path. Only the app and `sample/products.xlsx` are public; your real product sheet and
 bills never leave the phone.
