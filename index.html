@@ -16,20 +16,40 @@
     <section id="screen-billing" hidden>
       <p id="bill-noproducts" class="placeholder">No products yet. Go to <b>Products</b> and load your sheet first.</p>
       <div class="searchrow">
-        <input id="bill-search" type="search" placeholder="Type or speak a product…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search products">
+        <input id="bill-search" type="search" placeholder="Type a product, or tap the mic…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search products">
         <button id="bill-lang" class="lang" type="button" aria-label="Voice language">EN</button>
-        <button id="bill-mic" class="mic" type="button" aria-pressed="false" aria-label="Speak a product name" disabled>
+        <button id="bill-mic" class="mic" type="button" aria-pressed="false" aria-label="Start live listening" disabled>
           <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.59A6 6 0 0 0 18 11.5z"/></svg>
         </button>
       </div>
+      <p id="voice-live" class="livebar" role="status" hidden></p>
       <p id="voice-heard" class="heard" role="status" hidden></p>
       <ul id="bill-results" class="results" hidden></ul>
       <p id="bill-nomatch" class="placeholder" hidden>No product matches that.</p>
-      <p id="bill-empty" class="placeholder">Search for a product and tap it to add it to the bill.</p>
-      <ul id="bill-cart" class="cart"></ul>
+      <div id="last-bill" class="lastbill" hidden>
+        <span id="last-bill-text"></span>
+        <button id="last-bill-reprint" class="secondary" type="button">Reprint</button>
+      </div>
+      <p id="bill-empty" class="placeholder">Say a product, e.g. <b>“Maida 2 kg”</b>, or type it above. It appears here as the bill grows.</p>
+      <table id="bill-table" class="billtable" hidden>
+        <thead>
+          <tr><th class="c-sno">SNo</th><th class="c-amt">Amt</th><th class="c-name">Product name</th><th class="c-qty">Qty</th><th class="c-total">T. Amount</th><th class="c-ops">Ops</th></tr>
+        </thead>
+        <tbody id="bill-cart"></tbody>
+      </table>
       <p id="bill-msg" class="status" role="alert" hidden></p>
+      <div class="toasts">
+        <div id="undo-bar" class="toast" hidden>
+          <span id="undo-text"></span>
+          <button id="undo-btn" class="toast-btn" type="button">Undo</button>
+        </div>
+        <div id="confirm-bar" class="toast confirm" role="alert" hidden>
+          <span id="confirm-text"></span>
+          <button id="confirm-cancel" class="toast-btn" type="button">Cancel</button>
+        </div>
+      </div>
       <div class="billbar">
-        <div class="bb-total"><span>Total ₹</span><strong id="bill-total">0.00</strong></div>
+        <div class="bb-total"><span>Grand Total ₹</span><strong id="bill-total">0.00</strong></div>
         <button id="bill-generate" class="primary" type="button" disabled>Generate Bill</button>
       </div>
     </section>

@@ -5,7 +5,7 @@ const Fuse = require('../vendor/fuse.min.js');
 const XLSX = require('../vendor/xlsx.full.min.js');
 const Catalog = require('../js/catalog.js');
 const Search = require('../js/search.js');
-const { parse, qtyFor } = require('../js/parse.js');
+const { parse, qtyFor, isConfirm, isCancel } = require('../js/parse.js');
 const Match = require('../js/match.js');
 let n = 0; const t = (name, fn) => { fn(); n++; console.log('ok -', name); };
 const P = (text, qty, unit, phrase) => assert.deepStrictEqual(parse(text), { qty, unit, phrase }, text);
@@ -106,6 +106,46 @@ t('match: nonsense and empty give nothing', () => {
 t('match: no duplicates', () => {
   const r = Match.find(index, 'rice', 3).map(p => p.code);
   assert.strictEqual(new Set(r).size, r.length);
+});
+
+t('numbers heard as "to / too / for" right before a unit', () => {
+  P('maida to kg', 2, 'KG', 'maida');
+  P('maida too kilo', 2, 'KG', 'maida');
+  P('sugar for kg', 4, 'KG', 'sugar');
+  P('Maida 2 Kg', 2, 'KG', 'maida');
+  P('give it to me', null, null, 'it');          // "to" with no unit after it stays an ordinary word
+  P('one kilo for sugar', 1, 'KG', 'sugar');     // "for" not before a unit is just filler
+});
+
+t('"bill confirm" needs both words; "cancel" is separate', () => {
+  for (const ok of ['bill confirm', 'Bill confirmed', 'build confirm', 'bills confirm', 'பில் கன்பார்ம்', 'பில் கன்ஃபார்ம்'])
+    assert.strictEqual(isConfirm([ok]), true, ok);
+  assert.strictEqual(isConfirm(['maybe', 'bill conform']), true, 'any of the engine\'s guesses');
+  for (const no of ['confirm', 'bill', 'maida 2 kg', 'I will confirm tomorrow', 'sugar', ''])
+    assert.strictEqual(isConfirm([no]), false, no);
+  assert.strictEqual(isConfirm([]), false);
+  assert.strictEqual(isCancel(['cancel']), true); assert.strictEqual(isCancel(['please cancel it']), true);
+  assert.strictEqual(isCancel(['maida']), false); assert.strictEqual(isCancel([]), false);
+});
+
+t('auto-add only when exactly one product clearly IS what was said', () => {
+  const auto = q => { const d = Match.decide(index, q); return d.auto ? d.auto.name_en : null; };
+  // exact name / alias / code / Tamil name, spelling variants included
+  const yes = { maida: 'Maida', maaida: 'Maida', sugar: 'Sugar', sakkarai: 'Sugar', chakkarai: 'Sugar', sakarai: 'Sugar',
+    tengai: 'Coconut', kathirikkai: 'Brinjal', paneer: 'Paneer 200g', 'தக்காளி': 'Tomato', p001: 'Sugar',
+    rice: 'Rice (Ponni)', oil: 'Sunflower Oil 1L',            // a generic word that is one product's alias = that product is the default
+    basmati: 'Basmati Rice', sunflower: 'Sunflower Oil 1L' };  // nothing exact, exactly one product starts with it
+  Object.keys(yes).forEach(q => assert.strictEqual(auto(q), yes[q], q));
+  // ambiguous, too short, fuzzy-only, or unknown: never automatic
+  for (const q of ['powder', 'soap', 'chilli', 'ra', 'su', 'sugr', 'அரிசி', 'கடலை', 'how are you', 'qzxwv', '', 'a'])
+    assert.strictEqual(auto(q), null, q);
+});
+
+t('decide: the automatic choice is listed first, candidates stay capped', () => {
+  const d = Match.decide(index, 'sugar');
+  assert.strictEqual(d.candidates[0].name_en, 'Sugar'); assert.ok(d.candidates.length <= 3);
+  assert.deepStrictEqual(Match.decide(index, 'qzxwv'), { candidates: [], auto: null });
+  assert.strictEqual(Match.decide(index, 'powder').candidates.length, 3);
 });
 
 console.log(n + ' tests passed');

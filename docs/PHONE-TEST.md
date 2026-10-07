@@ -20,12 +20,18 @@ Write down anything that does not match and send it back.
 - [ ] Billing tab → type "suga" → Sugar appears → tap it. Quantity 1, total correct.
 - [ ] Set quantity 0.25 on a KG item, and 0.5 on a packet item (should turn red and block Generate Bill).
 
-## 4. Voice
-- [ ] Tap the mic. Chrome asks for **microphone permission** → Allow.
-- [ ] Say "two kg sugar". Good: it shows what it heard and suggests Sugar with 2 KG. Tap to add.
-- [ ] Switch to **தமிழ்** and say a product the way your customers do (try 5 items, in a normal shop noise level).
-- [ ] Note every item it got wrong: what you said, what it heard (shown on screen). Put the spoken names that
-      matter into the `aliases` column of the sheet and load the sheet again.
+## 4. Live voice
+- [ ] Tap the mic. Chrome asks for **microphone permission** → Allow. A red **LIVE** bar appears.
+- [ ] Say "Maida 2 kg". Good: a row appears by itself — `1 | 42.00 | Maida - மைதா | 2 Kg | 84.00` — with a 7-second Undo.
+- [ ] Say 3–4 more items one after another, without touching the phone. Good: rows grow downward and
+      **Grand Total** at the bottom adds them up. Note any item that was missed or wrong (what you said vs "Heard").
+- [ ] Say an ambiguous word such as "chilli". Good: it asks you to tap, and does not add anything by itself.
+- [ ] **Leave it live for 5+ minutes** with some quiet gaps and shop noise. Note: does it keep listening? how often
+      does Chrome beep / restart? does the screen stay on? does it add things from background talk?
+- [ ] Say "bill confirm". Good: "Saving bill ₹ … in 3…"; say "cancel" and it stops. Say it again and wait: the bill
+      is saved, the print dialog opens, and after printing you are back on an empty bill with the mic still live.
+- [ ] Switch to **தமிழ்** and repeat with the names your customers use. Put the spoken names that matter into the
+      `aliases` column and load the sheet again.
 
 ## 5. Print
 - [ ] Generate Bill. The print screen opens. First try **Save as PDF** and check the receipt is only the bill.

@@ -37,7 +37,7 @@ td.unit { color: var(--muted); font-size: .9rem; } th.price, td.price { text-ali
 td.name .ta { color: var(--muted); font-size: .9rem; }
 
 /* ---- billing ---- */
-body.billing-tab { padding-bottom: 140px; }
+body.billing-tab { padding-bottom: 150px; }
 button.secondary { min-height: 48px; padding: 0 20px; border: 2px solid var(--green); border-radius: 8px; background: var(--card); color: var(--green); font: inherit; font-weight: 600; }
 input[type="search"], input[type="text"], .l-qty, .l-price {
   font: inherit; min-height: 48px; padding: 0 12px; border: 1px solid #b9c2bc; border-radius: 8px; background: #fff; color: var(--ink);
@@ -52,15 +52,6 @@ input:disabled { background: #eceeec; }
 .r-ta { color: var(--muted); font-size: .9rem; }
 .r-price { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--green-dark); font-weight: 600; }
 
-.cart { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
-.line { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
-.l-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.l-remove { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.1rem; color: var(--bad); }
-.l-row { display: flex; align-items: center; gap: 6px; }
-.l-qty { width: 76px; text-align: right; }
-.l-price { width: 92px; text-align: right; }
-.l-unit, .l-x, .l-rs { color: var(--muted); }
-.l-total { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
 input.invalid { border-color: var(--bad); background: var(--bad-bg); }
 
 .billbar { position: fixed; left: 0; right: 0; bottom: 56px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--card); border-top: 1px solid var(--line); }
@@ -124,3 +115,37 @@ button.wide { width: 100%; }
 .bill-rows { list-style: none; margin: 0; padding: 0; }
 .bill-rows li { display: flex; justify-content: space-between; padding: 10px 12px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .bill-rows .bn { color: var(--muted); } .bill-rows .bt { font-weight: 600; }
+
+/* ---- the bill table: SNo | Amt | Product name | Qty | T. Amount | Ops ---- */
+.billtable { margin-top: 12px; table-layout: fixed; font-size: .92rem; }
+.billtable th, .billtable td { padding: 6px 4px; vertical-align: middle; }
+.billtable thead th { font-size: .72rem; line-height: 1.15; }
+.billtable .c-sno { width: 28px; text-align: center; color: var(--muted); }
+.billtable .c-amt { width: 64px; }
+.billtable .c-qty { width: 76px; }
+.billtable .c-total { width: 66px; text-align: right; font-variant-numeric: tabular-nums; }
+.billtable .c-ops { width: 40px; text-align: center; }
+.billtable .c-name { overflow-wrap: anywhere; line-height: 1.25; }
+.billtable td.c-total { font-weight: 700; }
+.billtable input.l-price, .billtable input.l-qty { width: 100%; min-height: 40px; padding: 0 6px; text-align: right; font-size: .95rem; }
+.billtable .c-qty { white-space: nowrap; }
+.billtable .c-qty input.l-qty { width: 46px; display: inline-block; }
+.billtable .l-unit { margin-left: 3px; font-size: .8rem; }
+.billtable .l-remove { width: 36px; height: 36px; padding: 0; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--bad); }
+.billtable .l-remove:active { background: var(--bad-bg); }
+.billtable tr.line { scroll-margin-top: 64px; scroll-margin-bottom: 220px; }   /* keep rows clear of the app header and the bottom bars */
+.billtable tr.flash { animation: flash 1.4s ease-out; }
+@keyframes flash { 0% { background: #cfeedd; } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .billtable tr.flash { animation: none; } }
+
+/* ---- live voice ---- */
+.livebar { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: #fdecec; color: #8f1d1d; font-weight: 600; }
+.heard.muted { background: transparent; color: var(--muted); padding: 4px 12px; font-size: .9rem; }
+.lastbill { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 6px 12px; border-radius: 8px; background: var(--ok-bg); font-size: .9rem; }
+.lastbill .secondary { min-height: 40px; padding: 0 14px; }
+
+/* ---- toasts above the Grand Total bar ---- */
+.toasts { position: fixed; left: 0; right: 0; bottom: 132px; z-index: 3; display: grid; gap: 6px; padding: 0 16px; pointer-events: none; }
+.toast { pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 720px; margin: 0 auto; width: 100%; padding: 8px 8px 8px 14px; border-radius: 10px; background: #26302b; color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.3); }
+.toast.confirm { background: #8a5a00; }
+.toast-btn { flex: none; min-height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: rgba(255,255,255,.2); color: #fff; font: inherit; font-weight: 700; }

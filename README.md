@@ -4,8 +4,8 @@ Small-shop billing that runs entirely in the browser — no server, no database.
 Products come from an Excel sheet; the cashier will speak a product name, the app shows
 its price, and a bill is printed on a 58mm thermal printer. Android Chrome is the target.
 
-**Status:** step 5 of 5 — everything is built; it is published with GitHub Pages and ready for a phone test
-(see [docs/PHONE-TEST.md](docs/PHONE-TEST.md)).
+**Status:** built and published with GitHub Pages, ready for a phone test (see
+[docs/PHONE-TEST.md](docs/PHONE-TEST.md)). Live hands-free voice billing was added after the five planned steps.
 
 ## Publishing
 
@@ -30,22 +30,37 @@ If you rename the default branch, keep it in the workflow's `branches:` list (`m
   cannot see whether the download was kept, so check the Downloads folder.
 - Bill numbers keep a separate counter per day, so a phone clock that jumps back cannot reuse a number.
 
-## Voice (step 3)
+## Live voice billing
 
-- Tap the **mic**, say e.g. *"two kg sugar"*, *"rendu kilo sakkarai"*, *"அரை கிலோ தக்காளி"*. The app shows what it
-  heard and up to **3 suggested products** with the quantity it understood. **Nothing is added until the
-  cashier taps one.** "See all matches" falls back to the typed list.
-- **EN / தமிழ்** button switches the speech language (English-India / Tamil-India) and is remembered.
-- Understands digits and number words — English (one…ten, half, quarter, "one and a half", "three quarter")
-  and Tamil in English letters (onnu, rendu, moonu, arai, kaal, mukkaal, onnara…) or Tamil script — plus units
-  kg / gram / litre / ml / packet / piece. 500 gram of a KG item becomes 0.5.
-- If the unit said does not fit how the product is sold (*"2 kg maggi"*, a packet item) the quantity is
-  set to **1** with a warning, never carried over.
-- Matching: exact / starts-with / word matches first, then fuzzy (Fuse.js) with common spelling variants of
-  Tamil-in-English folded together (sakkarai = chakkarai = sakarai, thengai = tengai). **Put the spoken names
-  your shop uses in the `aliases` column** — that is what improves matching most.
-- Speech recognition is the browser's own (Chrome sends audio to Google's service), so it **needs internet**
-  and microphone permission. Typing always works offline. No other AI is involved.
+Tap the **mic once** and it keeps listening — it does not stop after each phrase. It stops only when you tap the
+mic again (or on a fatal error such as a blocked microphone). Chrome ends listening sessions by itself now and
+then; the app restarts it quietly, keeps the screen awake while live, and gives up with a message only if the
+microphone keeps cutting out. On Android each restart may play Chrome's small listening beep.
+
+- **Say a product and it is added**, e.g. *"Maida 2 kg"* → a row `1 | 42.00 | Maida - மைதா | 2 Kg | 84.00 | 🗑`.
+  The bill grows downward; **Grand Total** (the sum of all T. Amounts) is pinned at the bottom. Tap an Amt or Qty
+  to correct it; the bin icon deletes a row. Saying the same product again adds to its row.
+- **Added only when it is clear.** A phrase is added on its own only if exactly one product *is* what you said
+  (its name, Tamil name, code or an alias, spelling variants included — *chakkarai* = *sakkarai*), or, failing
+  that, exactly one product starts with it. Anything ambiguous (*"chilli"*, *"powder"*), only fuzzy, or whose unit
+  does not fit (*"2 kg maggi"*, a packet item) shows up to 3 suggestions to **tap** instead, and listening
+  continues. Background talk that matches nothing is ignored.
+  **An alias that is a generic word (*oil*, *rice*) makes that product the automatic choice** — give such
+  aliases only to your default item.
+- **Undo:** every voice add shows *"Added Maida · 2 Kg — Undo"* for 7 seconds.
+- **Numbers Chrome mishears:** *"maida to kg"* / *"too kg"* is read as 2 kg and *"for kg"* as 4 kg (only right
+  before a unit). Also understood: digits, English number words (one…ten, half, quarter, "one and a half",
+  "three quarter"), Tamil in English letters (onnu, rendu, arai, kaal, mukkaal, onnara…) and Tamil script;
+  units kg / gram / litre / ml / packet / piece (500 gram of a KG item becomes 0.5).
+- **"Bill confirm"** (both words — *"confirm"* alone does nothing) starts a **3-second countdown**
+  ("Saving bill ₹ 132.00 in 3…"). Say **"cancel"**, tap **Cancel**, or change the bill (add, edit, delete) and it
+  is cancelled. Otherwise the bill is saved, the receipt is printed, the table is cleared and the mic stays live
+  for the next customer. A **Last bill … Reprint** strip keeps the previous receipt one tap away. **Generate Bill**
+  does the same immediately, without the countdown.
+- While the receipt screen is open, speech is ignored; it closes when the print dialog closes (or tap **New bill**).
+- **EN / தமிழ்** picks the speech language (not changeable while live).
+- Speech recognition is the browser's own (Chrome sends audio to Google's service), so it **needs internet** and
+  microphone permission. While live it hears everything said near the phone. Typing always works offline.
 
 ## Billing (step 2)
 

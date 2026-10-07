@@ -5,6 +5,9 @@
   var DECIMAL_UNITS = { KG: 1, LTR: 1 };   // sold loose: 0.25 kg is fine; 2.5 packets is not
   var MAX_QTY = 100000, MAX_PRICE = 10000000;
 
+  var UNIT_LABELS = { KG: 'Kg', LTR: 'Ltr', PKT: 'Pkt', PCS: 'Pcs' };
+  function unitLabel(unit) { var u = String(unit || '').toUpperCase(); return UNIT_LABELS[u] || u; }
+
   function allowsDecimal(unit) { return !!DECIMAL_UNITS[String(unit || '').toUpperCase()]; }
 
   // Typed quantity -> number, or NaN. Up to 3 decimals for loose units, whole numbers otherwise.
@@ -53,7 +56,7 @@
              pricePaise: ok ? toPaise(price) : NaN, totalPaise: ok ? lineTotal(qty, toPaise(price)) : NaN };
   }
 
-  var api = { allowsDecimal: allowsDecimal, parseQty: parseQty, parsePrice: parsePrice, toPaise: toPaise, lineTotal: lineTotal,
+  var api = { unitLabel: unitLabel, allowsDecimal: allowsDecimal, parseQty: parseQty, parsePrice: parsePrice, toPaise: toPaise, lineTotal: lineTotal,
               formatMoney: formatMoney, formatQty: formatQty, localDate: localDate, formatDateTime: formatDateTime,
               billNo: billNo, evalLine: evalLine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Bill = api;

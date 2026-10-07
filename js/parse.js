@@ -30,12 +30,13 @@
   ('a an the and of for to me please give i want need kudu kudunga kodu venum vendum thaanga tharuga ' +
    'கொடு கொடுங்க தாங்க வேண்டும் வேணும்').split(' ').forEach(function (w) { FILLER[w] = 1; });
   var CONNECTORS = { and: 1, a: 1 };
+  var HEARD_AS_TWO = { to: 1, too: 1, tu: 1 }, HEARD_AS_FOUR = { 'for': 1, fore: 1 };
 
   function tokenize(text) {
     var s = String(text || '').toLowerCase()
       .replace(/(\d)([a-z஀-௿])/g, '$1 $2').replace(/([a-z஀-௿])(\d)/g, '$1 $2')   // "2kg" -> "2 kg"
       .replace(/[^a-z0-9஀-௿./,\s]/g, ' ').replace(/[.,]+(\s|$)/g, ' ');                       // drop punctuation, keep 2.5
-    return s.split(/\s+/).filter(Boolean).map(function (w) {
+    var tokens = s.split(/\s+/).filter(Boolean).map(function (w) {
       var t = { w: w }, m;
       if (/^\d+([.,]\d+)?$/.test(w)) t.n = Number(w.replace(',', '.'));
       else if ((m = /^(\d+)\/(\d+)$/.exec(w)) && Number(m[2])) t.n = Number(m[1]) / Number(m[2]);
@@ -43,6 +44,14 @@
       if (Object.prototype.hasOwnProperty.call(UNITS, w)) t.u = UNITS[w];
       return t;
     });
+    // Speech engines write "two kg" as "to kg" / "too kg" and "four kg" as "for kg": right before a unit, take it as the number
+    tokens.forEach(function (t, i) {
+      var next = tokens[i + 1];
+      if (t.n === undefined && next && next.u) {
+        if (HEARD_AS_TWO[t.w]) t.n = 2; else if (HEARD_AS_FOUR[t.w]) t.n = 4;
+      }
+    });
+    return tokens;
   }
 
   // "three quarter(s)" is 0.75, not 3.25
@@ -105,6 +114,16 @@
     return { qty: q, note: '' };
   }
 
-  var api = { parse: parse, qtyFor: qtyFor };
+  // Voice commands. Both words are required for "bill confirm": "confirm" alone could be ordinary talk.
+  // Chrome writes "bill" as bill / build / pill and "confirm" as confirm / confirmed / conform.
+  function anyText(texts, re) {
+    return (texts || []).some(function (t) { return re.test(String(t || '').toLowerCase()); });
+  }
+  function isConfirm(texts) {
+    return anyText(texts, /(confirm|conform|கன்\S*ர்ம்)/) && anyText(texts, /(\bbills?\b|\bbuild\b|\bpill\b|பில்)/);
+  }
+  function isCancel(texts) { return anyText(texts, /(\bcancel\b|ரத்து)/); }
+
+  var api = { parse: parse, qtyFor: qtyFor, isConfirm: isConfirm, isCancel: isCancel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Parse = api;
 })(typeof window !== 'undefined' ? window : this);

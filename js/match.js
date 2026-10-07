@@ -20,15 +20,33 @@
       keys: [{ name: 'name', weight: 0.4 }, { name: 'ta', weight: 0.3 }, { name: 'aliases', weight: 0.3 }],
       includeScore: true, threshold: 0.35, ignoreLocation: true, minMatchCharLength: 2
     });
-    return { products: products, fuse: fuse, Search: Search };
+    // every folded full name / alias, per product: a spoken phrase equal to one of these is an exact match.
+    // Codes are left out: folding would make P001 and P011 the same word.
+    var keys = docs.map(function (d) {
+      return [d.name, fold(d.ta)].concat(d.aliases).filter(Boolean);
+    });
+    return { products: products, fuse: fuse, Search: Search, keys: keys };
   }
 
-  // Up to `limit` products, best first: exact/prefix/word matches, then fuzzy ones to fill the list.
+  // Products whose name, Tamil name, code or alias IS the phrase (spelling variants included).
+  function exactMatches(index, phrase) {
+    var fq = fold(phrase), seen = {}, out = [];
+    index.Search.findScored(index.products, phrase, 1000).forEach(function (r) {
+      if (r.s === 0) { seen[r.p.code] = 1; out.push(r.p); }
+    });
+    index.products.forEach(function (p, i) {
+      if (!seen[p.code] && index.keys[i].indexOf(fq) !== -1) { seen[p.code] = 1; out.push(p); }
+    });
+    return out;
+  }
+
+  // Up to `limit` products, best first: exact matches, then starts-with / word matches, then fuzzy ones.
   function find(index, phrase, limit) {
     limit = limit || 3;
     if (String(phrase || '').trim().length < 2) return [];   // a single letter is noise, not a product
     var out = [], seen = {};
     function add(p) { if (!seen[p.code] && out.length < limit) { seen[p.code] = 1; out.push(p); } }
+    exactMatches(index, phrase).forEach(add);
     index.Search.findScored(index.products, phrase, limit).filter(function (r) { return r.s <= 2; }).forEach(function (r) { add(r.p); });
     var q = fold(phrase);
     if (q.length >= 2 && out.length < limit) {
@@ -37,6 +55,23 @@
     return out;
   }
 
-  var api = { build: build, find: find, fold: fold };
+  // { candidates, auto }. `auto` is set only when it is safe to add without asking:
+  //   - exactly one product IS what was said (name, Tamil name, code or alias, spelling variants included), or
+  //   - nothing is exact and exactly one product starts with / contains the phrase as a word (phrase 3+ letters).
+  // A fuzzy-only match never qualifies: a mis-heard word could land on the wrong item.
+  function decide(index, phrase, limit) {
+    var candidates = find(index, phrase, limit || 3), auto = null;
+    if (!candidates.length) return { candidates: [], auto: null };
+    var exact = exactMatches(index, phrase);
+    if (exact.length === 1) auto = exact[0];
+    else if (!exact.length && String(phrase).trim().length >= 3) {
+      var precise = index.Search.findScored(index.products, phrase, 1000).filter(function (r) { return r.s <= 2; });
+      if (precise.length === 1) auto = precise[0].p;
+    }
+    if (auto) candidates = [auto].concat(candidates.filter(function (c) { return c !== auto; })).slice(0, limit || 3);
+    return { candidates: candidates, auto: auto };
+  }
+
+  var api = { build: build, find: find, decide: decide, fold: fold };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Match = api;
 })(typeof window !== 'undefined' ? window : this);
