@@ -4,8 +4,25 @@ Small-shop billing that runs entirely in the browser — no server, no database.
 Products come from an Excel sheet; the cashier will speak a product name, the app shows
 its price, and a bill is printed on a 58mm thermal printer. Android Chrome is the target.
 
-**Status:** step 2 of 5 — load `products.xlsx`; bill by typing; print a receipt.
-Voice (3), bills list + Excel export (4) and deployment (5) are still to come.
+**Status:** step 3 of 5 — load `products.xlsx`; bill by typing or by voice; print a receipt.
+Bills list + Excel export (4) and deployment (5) are still to come.
+
+## Voice (step 3)
+
+- Tap the **mic**, say e.g. *"two kg sugar"*, *"rendu kilo sakkarai"*, *"அரை கிலோ தக்காளி"*. The app shows what it
+  heard and up to **3 suggested products** with the quantity it understood. **Nothing is added until the
+  cashier taps one.** "See all matches" falls back to the typed list.
+- **EN / தமிழ்** button switches the speech language (English-India / Tamil-India) and is remembered.
+- Understands digits and number words — English (one…ten, half, quarter, "one and a half", "three quarter")
+  and Tamil in English letters (onnu, rendu, moonu, arai, kaal, mukkaal, onnara…) or Tamil script — plus units
+  kg / gram / litre / ml / packet / piece. 500 gram of a KG item becomes 0.5.
+- If the unit said does not fit how the product is sold (*"2 kg maggi"*, a packet item) the quantity is
+  set to **1** with a warning, never carried over.
+- Matching: exact / starts-with / word matches first, then fuzzy (Fuse.js) with common spelling variants of
+  Tamil-in-English folded together (sakkarai = chakkarai = sakarai, thengai = tengai). **Put the spoken names
+  your shop uses in the `aliases` column** — that is what improves matching most.
+- Speech recognition is the browser's own (Chrome sends audio to Google's service), so it **needs internet**
+  and microphone permission. Typing always works offline. No other AI is involved.
 
 ## Billing (step 2)
 
@@ -49,9 +66,9 @@ First sheet of the workbook, header in row 1:
 ## Tests
 
 ```
-node test/catalog.test.js && node test/bill.test.js         # row checks, bill math, search
+node test/catalog.test.js && node test/bill.test.js && node test/voice.test.js   # rows, bill math, search, parser, matcher
 python -m http.server 8000 &                                # then, with playwright installed:
-node test/e2e.js && node test/e2e-billing.js                # headless Chrome
+node test/e2e.js && node test/e2e-billing.js && node test/e2e-voice.js          # headless Chrome (voice uses a fake speech engine)
 ```
 
-`vendor/xlsx.full.min.js` is SheetJS 0.18.5 (Apache-2.0), vendored so the app works offline.
+`vendor/` holds SheetJS 0.18.5 and Fuse.js 6.6.2 (both Apache-2.0), vendored so the app works offline.

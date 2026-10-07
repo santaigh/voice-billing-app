@@ -16,17 +16,21 @@
     return 3;
   }
 
-  function find(products, query, limit) {
+  // [{p, s}] best first. s: 0 exact, 1 starts with, 2 starts a word, 3 merely contains
+  function findScored(products, query, limit) {
     var q = norm(query);
     if (!q) return [];
     var tokens = q.split(' ');
     return products.map(function (p) { return { p: p, s: score(p, tokens, q) }; })
       .filter(function (r) { return r.s >= 0; })
       .sort(function (a, b) { return a.s - b.s || (a.p.name_en < b.p.name_en ? -1 : a.p.name_en > b.p.name_en ? 1 : 0); })
-      .slice(0, limit || 8)
-      .map(function (r) { return r.p; });
+      .slice(0, limit || 8);
   }
 
-  var api = { find: find };
+  function find(products, query, limit) {
+    return findScored(products, query, limit).map(function (r) { return r.p; });
+  }
+
+  var api = { find: find, findScored: findScored };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Search = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -10,26 +10,40 @@
     return e;
   }
 
-  var products = [], cart = [], shopName = '', busy = false;
+  var products = [], cart = [], shopName = '', busy = false, matchIndex = null, listening = null;
 
   // ---- search ----
-  function showResults() {
-    var ul = $('bill-results'), found = Search.find(products, $('bill-search').value, 8);
+  // entries: [{ p, hint, pick }]. Used for typed results and for voice suggestions alike.
+  function renderList(entries, more) {
+    var ul = $('bill-results');
     ul.textContent = '';
-    found.forEach(function (p) {
+    entries.forEach(function (en) {
       var li = el('li'), b = el('button', 'result');
       b.type = 'button';
       var left = el('span', 'r-left');
-      left.appendChild(el('span', 'r-en', p.name_en));
-      if (p.name_ta) left.appendChild(el('span', 'r-ta', p.name_ta));
+      left.appendChild(el('span', 'r-en', en.p.name_en));
+      if (en.p.name_ta) left.appendChild(el('span', 'r-ta', en.p.name_ta));
       b.appendChild(left);
-      b.appendChild(el('span', 'r-price', '₹' + p.price.toFixed(2) + ' / ' + p.unit));
-      b.addEventListener('click', function () { addToCart(p); });
+      b.appendChild(el('span', 'r-price', en.hint));
+      b.addEventListener('click', en.pick);
       li.appendChild(b);
       ul.appendChild(li);
     });
-    var q = $('bill-search').value.trim();
-    ul.hidden = !found.length;
+    if (more) {
+      var li2 = el('li'), mb = el('button', 'result more', more.label);
+      mb.type = 'button';
+      mb.addEventListener('click', more.pick);
+      li2.appendChild(mb);
+      ul.appendChild(li2);
+    }
+    ul.hidden = !entries.length;
+  }
+
+  function priceHint(p) { return '₹' + p.price.toFixed(2) + ' / ' + p.unit; }
+
+  function showResults() {
+    var found = Search.find(products, $('bill-search').value, 8), q = $('bill-search').value.trim();
+    renderList(found.map(function (p) { return { p: p, hint: priceHint(p), pick: function () { addToCart(p); } }; }));
     $('bill-nomatch').hidden = !q || found.length > 0;
   }
 
@@ -40,13 +54,15 @@
   }
 
   // ---- cart ----
-  function addToCart(p) {
+  // qty: how many to add (default 1). Adding a product already in the cart adds to its quantity.
+  function addToCart(p, qty) {
+    qty = qty || 1;
     var line = cart.filter(function (l) { return l.code === p.code; })[0];
     if (line) {
       var q = Bill.parseQty(line.qtyText, line.unit);
-      line.qtyText = Bill.formatQty(isFinite(q) ? q + 1 : 1);   // same product again = one more
+      line.qtyText = Bill.formatQty(isFinite(q) ? q + qty : qty);
     } else {
-      cart.push({ code: p.code, name_en: p.name_en, unit: p.unit, qtyText: '1', priceText: p.price.toFixed(2) });
+      cart.push({ code: p.code, name_en: p.name_en, unit: p.unit, qtyText: Bill.formatQty(qty), priceText: p.price.toFixed(2) });
     }
     render();
     clearSearch();
@@ -165,6 +181,73 @@
     $('bill-search').focus();
   }
 
+  // ---- voice ----
+  function setHeard(text, kind) {
+    var h = $('voice-heard');
+    h.textContent = text;
+    h.className = 'heard ' + (kind || '');
+    h.hidden = !text;
+  }
+
+  var VOICE_ERRORS = {
+    'not-allowed': 'The microphone is blocked. Allow it for this site in Chrome settings, then try again.',
+    'service-not-allowed': 'The microphone is blocked. Allow it for this site in Chrome settings, then try again.',
+    'no-speech': "Didn't catch that. Tap the mic and try again, or type the name.",
+    'network': 'Voice needs internet. Type the product name instead.',
+    'audio-capture': 'No microphone found.',
+    'language-not-supported': 'This language is not available for voice on this device.'
+  };
+
+  function setMic(on) {
+    var b = $('bill-mic');
+    b.classList.toggle('listening', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.setAttribute('aria-label', on ? 'Stop listening' : 'Speak a product name');
+    $('bill-lang').disabled = on;
+  }
+
+  function onSpoken(alts) {
+    // Try what the engine heard best first; fall back to its other guesses if nothing matches.
+    var parsed = null, cands = [];
+    for (var i = 0; i < alts.length && !cands.length; i++) {
+      parsed = Parse.parse(alts[i]);
+      cands = parsed.phrase ? Match.find(matchIndex, parsed.phrase, 3) : [];
+    }
+    var said = '“' + alts[0].trim() + '”';
+    if (!cands.length) {
+      var first = Parse.parse(alts[0]);
+      $('bill-search').value = first.phrase;
+      renderList([]);
+      setHeard('Heard ' + said + ' — no matching product. Try again, or edit the text above.', 'warn');
+      return;
+    }
+    $('bill-search').value = parsed.phrase;
+    var heard = 'Heard ' + said + (parsed.qty !== null ? ' → ' + Bill.formatQty(parsed.qty) + (parsed.unit ? ' ' + parsed.unit : '') : '') + '. Tap the right product:';
+    setHeard(heard, 'ok');
+    var entries = cands.map(function (p) {
+      var q = Parse.qtyFor(parsed, p);
+      return {
+        p: p,
+        hint: (q.note ? '⚠ ' : '') + Bill.formatQty(q.qty) + ' ' + p.unit + ' · ₹' + p.price.toFixed(2),
+        pick: function () { addToCart(p, q.qty); setHeard(q.note, q.note ? 'warn' : ''); }
+      };
+    });
+    var all = Search.find(products, parsed.phrase, 8);
+    renderList(entries, all.length > cands.length ? { label: 'See all matches for “' + parsed.phrase + '”', pick: function () { setHeard(''); showResults(); } } : null);
+  }
+
+  function toggleMic() {
+    if (listening) { listening.stop(); return; }
+    setHeard('');
+    listening = Voice.listen(Voice.getLang().code, {
+      onStart: function () { setMic(true); setHeard('Listening…', 'live'); },
+      onInterim: function (t) { setHeard('Listening… “' + t + '”', 'live'); },
+      onFinal: function (alts) { onSpoken(alts); },
+      onError: function (code) { if (code !== 'aborted') { renderList([]); setHeard(VOICE_ERRORS[code] || 'Voice did not work (' + code + '). Type the name instead.', 'bad'); } },
+      onEnd: function () { listening = null; setMic(false); }
+    });
+  }
+
   function init() {
     $('bill-search').addEventListener('input', showResults);
     $('bill-search').addEventListener('keydown', function (e) {
@@ -174,6 +257,13 @@
       if (first) addToCart(first);
     });
     $('bill-generate').addEventListener('click', generate);
+    $('bill-mic').addEventListener('click', toggleMic);
+    $('bill-lang').textContent = Voice.getLang().label;
+    $('bill-lang').addEventListener('click', function () { $('bill-lang').textContent = Voice.nextLang().label; });
+    if (!Voice.supported) {
+      $('bill-mic').disabled = true; $('bill-lang').disabled = true;
+      setHeard("Voice isn't available in this browser. Use Chrome on Android, or type the product name.", 'warn');
+    }
     $('receipt-print').addEventListener('click', function () { window.print(); });
     $('receipt-new').addEventListener('click', closeReceipt);
     render();
@@ -186,6 +276,8 @@
       products = list;
       $('bill-noproducts').hidden = list.length > 0;
       $('bill-search').disabled = !list.length;
+      $('bill-mic').disabled = !list.length || !Voice.supported;
+      matchIndex = list.length ? Match.build(Fuse, list, Search) : null;
       showResults();
     }
   };

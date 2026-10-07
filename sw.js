@@ -1,7 +1,7 @@
 /* Caches the app shell so it opens offline. Bump VERSION whenever a shell file changes. */
-var VERSION = 'v2';
-var SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/catalog.js', 'js/bill.js', 'js/search.js', 'js/store.js', 'js/billing.js',
-             'vendor/xlsx.full.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+var VERSION = 'v3';
+var SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/catalog.js', 'js/bill.js', 'js/search.js', 'js/parse.js', 'js/match.js', 'js/voice.js', 'js/store.js', 'js/billing.js',
+             'vendor/xlsx.full.min.js', 'vendor/fuse.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));

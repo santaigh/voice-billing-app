@@ -15,7 +15,14 @@
   <main>
     <section id="screen-billing" hidden>
       <p id="bill-noproducts" class="placeholder">No products yet. Go to <b>Products</b> and load your sheet first.</p>
-      <input id="bill-search" type="search" placeholder="Type a product name…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search products">
+      <div class="searchrow">
+        <input id="bill-search" type="search" placeholder="Type or speak a product…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search products">
+        <button id="bill-lang" class="lang" type="button" aria-label="Voice language">EN</button>
+        <button id="bill-mic" class="mic" type="button" aria-pressed="false" aria-label="Speak a product name" disabled>
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.59A6 6 0 0 0 18 11.5z"/></svg>
+        </button>
+      </div>
+      <p id="voice-heard" class="heard" role="status" hidden></p>
       <ul id="bill-results" class="results" hidden></ul>
       <p id="bill-nomatch" class="placeholder" hidden>No product matches that.</p>
       <p id="bill-empty" class="placeholder">Search for a product and tap it to add it to the bill.</p>
@@ -73,6 +80,10 @@
   <script src="js/catalog.js"></script>
   <script src="js/bill.js"></script>
   <script src="js/search.js"></script>
+  <script src="vendor/fuse.min.js"></script>
+  <script src="js/parse.js"></script>
+  <script src="js/match.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/store.js"></script>
   <script src="js/billing.js"></script>
   <script src="js/app.js"></script>
