@@ -8,8 +8,7 @@ confirmed bill into it:
 | **Bills** | `Sl No · Date · Bill ID · Grand Total` — click a **Bill ID** to jump to that bill's items |
 | **Bill items** | `Bill ID · SNo · Amt · Product name · Qty · T. Amount · Back` — every item of every bill, with a Grand Total row per bill and a **↑ Bills** link back |
 
-> The app side (sending each bill automatically) is the next build step. This guide gets the sheet and the script ready,
-> and lets you check that they work, before that.
+> The app sends each confirmed bill to this sheet by itself once you connect it (step 6).
 
 ## 1. Find your folder's ID
 Open the Drive folder in the browser. Its address looks like
@@ -47,9 +46,20 @@ Do **not** put it in GitHub or share it publicly; it only goes into the script i
   KEY is the lock. Without the right KEY every request is refused. Anyone holding **both** could add rows to your sheet
   (they still could not read it). If they leak, run a fresh deployment and change the key (see below).
 
-## 6. Put them in the app (next build step)
-Products tab → **Google Sheet** box → paste the URL and the KEY → **Save & test** → **Send all existing bills**.
-Do the same on every phone or PC that bills — they all write into the same sheet.
+## 6. Put them in the app
+1. In the app: **Products tab → Google Sheet box**. Paste the **Web app URL** and the **KEY**, then tap **Save & test**.
+   - `✓ Connected. The sheet has 0 bill(s) so far.` — all good (normal mode).
+   - `✓ Connected in blind mode …` — also good: this browser does not let the page read Google's reply, so the app confirms each bill with a second request.
+   - `The key is wrong…` — copy the KEY from the script's Execution log again.
+   - `The address did not answer like the Shop Billing script…` — check step 4 (Execute as **Me**, access **Anyone**, URL ends in `/exec`).
+2. Tap **Send all existing bills** to add the bills already saved on this device (the sheet skips any it already has).
+3. From now on every confirmed bill goes to the sheet by itself. The **Bills tab** shows `✓ Google Sheet is up to date`, or how many bills are
+   waiting (no internet, Google busy…) and a **Send now** button.
+4. Do the same on every phone or PC that bills — they all write into the same sheet (Sl No is numbered by the sheet, in arrival order).
+
+**If you deployed the script before the app side existed:** open the script, replace its code with the latest `cloud/Code.gs`
+(you do **not** need to run `setup` again or re-enter the folder ID), Save, then **Deploy → Manage deployments → ✏️ Edit →
+Version: New version → Deploy**. The newer script adds the read-only confirmation requests used by blind mode.
 
 ## Troubleshooting
 | You see | Do this |

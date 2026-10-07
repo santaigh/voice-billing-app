@@ -1,6 +1,6 @@
 /* Keeps a copy of the app so it opens offline. Bump VERSION when the list of shell files changes. */
 var VERSION = 'v7';
-var SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/catalog.js', 'js/bill.js', 'js/search.js', 'js/parse.js', 'js/match.js', 'js/voice.js', 'js/store.js', 'js/billing.js', 'js/export.js', 'js/bills.js',
+var SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/catalog.js', 'js/bill.js', 'js/search.js', 'js/parse.js', 'js/match.js', 'js/voice.js', 'js/store.js', 'js/billing.js', 'js/export.js', 'js/cloud.js', 'js/bills.js',
              'vendor/xlsx.full.min.js', 'vendor/fuse.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {

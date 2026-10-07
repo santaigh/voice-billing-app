@@ -7,12 +7,28 @@ its price, and a bill is printed on a 58mm thermal printer. Android Chrome is th
 **Status:** built and published with GitHub Pages, ready for a phone test (see
 [docs/PHONE-TEST.md](docs/PHONE-TEST.md)). Live hands-free voice billing was added after the five planned steps.
 
-## Google Sheet sync (in progress)
+## Google Sheet sync
 
-`cloud/` holds a Google Apps Script that writes every confirmed bill into one Google Sheet in your Drive folder
-(tab **Bills**: `Sl No · Date · Bill ID · Grand Total`, Bill ID links to tab **Bill items**). **Step A is done** — the script,
-its tests and the setup guide ([cloud/SETUP.md](cloud/SETUP.md)). The app does not send bills to it yet (step B).
-Your Drive folder ID is typed into the script by you and is never committed to this public repo.
+Every confirmed bill is also written, in the background, into **one Google Sheet in your own Drive folder**:
+tab **Bills** (`Sl No · Date · Bill ID · Grand Total`; click a Bill ID to jump to its rows) and tab **Bill items**
+(every item of every bill, a Grand Total row per bill, a "↑ Bills" link back).
+Set it up once with [cloud/SETUP.md](cloud/SETUP.md) (about 10 minutes), then on each phone/PC: **Products tab → Google Sheet
+box → paste the Web app URL and the KEY → Save & test → Send all existing bills**.
+
+- **Billing never waits for Google and never fails because of it.** A bill is saved on the device first and put on a
+  "to send" list in the same transaction. The list is emptied whenever Google can be reached: right after the bill, when the
+  phone comes back online, when the app is opened, with back-off retries (30 s, 2 min, 10 min, then every 15 min), or with
+  **Send now**. A bill sent twice appears once (the script ignores a Bill ID it already has).
+- The **Bills tab** shows a status line: `✓ Google Sheet is up to date` · `⏳ 2 bills waiting to send` ·
+  `⚠ <what is wrong>` (e.g. the key is wrong — no endless retrying) · plus **Open Google Sheet**.
+- **Normal vs blind mode.** Save & test first tries a normal request and reads Google's reply. If the browser refuses to
+  let the page read the reply, the app switches to *blind mode* (POST without reading, then confirm with a read-only request
+  loaded as a script tag) and tells you. Blind mode works the same, but a refusal shows as a generic "the sheet did not accept
+  this bill", and the key travels in the web address of those confirmation requests.
+- **Send all existing bills** adds every bill saved on this device (also the ones from before you connected); the sheet skips
+  any it already has. Bills saved before items were kept appear on the Bills tab only.
+- The URL and the KEY are stored on the device only — never in this repo. Your Drive folder ID is typed into the script by you.
+- The app's own **Export to Excel** (two sheets, works offline) stays as a second backup.
 
 ## Publishing
 

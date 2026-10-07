@@ -88,6 +88,54 @@
     }).then(function () { $('prod-file').value = ''; });
   }
 
+  // ---- Google Sheet box (Products tab) ----
+  function cloudMsg(text, kind) {
+    var m = $('cloud-msg');
+    m.textContent = text;
+    m.className = 'status ' + (kind || '');
+    m.hidden = !text;
+  }
+
+  function initCloud() {
+    Cloud.onChange(function (s) {
+      $('cloud-sendall').disabled = !s.connected || s.busy;
+      $('cloud-disconnect').disabled = !s.connected;
+      $('cloud-key').placeholder = s.connected ? 'saved on this device — type a new one to replace it' : 'paste the KEY from the script';
+      if (s.connected && !$('cloud-url').value) $('cloud-url').value = s.url;
+      $('cloud-conn').textContent = s.connected
+        ? '✓ Connected (' + (s.mode === 'blind' ? 'blind mode' : 'normal') + '). Every confirmed bill is sent to the sheet.'
+        : 'Not connected. Set it up once with the steps in cloud/SETUP.md, then paste the two values here.';
+      $('cloud-sheet').hidden = !s.sheetUrl;
+      if (s.sheetUrl) $('cloud-sheet-link').href = s.sheetUrl;
+    });
+
+    $('cloud-save').addEventListener('click', function () {
+      cloudMsg('Testing the connection…', '');
+      $('cloud-save').disabled = true;
+      Cloud.connect($('cloud-url').value, $('cloud-key').value).then(function (r) {
+        $('cloud-key').value = '';
+        cloudMsg(r.mode === 'blind'
+          ? '✓ Connected in blind mode: this browser does not let the page read Google\'s reply, so each bill is confirmed with a second request. The sheet has ' + r.bills + ' bill(s) so far.'
+          : '✓ Connected. The sheet has ' + r.bills + ' bill(s) so far. Press “Send all existing bills” to add the ones already saved here.', 'ok');
+      }, function (err) { cloudMsg(err.message, 'bad'); }).then(function () { $('cloud-save').disabled = false; });
+    });
+
+    $('cloud-sendall').addEventListener('click', function () {
+      cloudMsg('Sending…', '');
+      Cloud.sendAll().then(function (r) {
+        var s = Cloud.status();
+        if (s.error) cloudMsg(s.error, 'warn');
+        else if (s.failed) cloudMsg(s.failed + ' bill(s) could not be sent: ' + s.firstFailure, 'warn');
+        else cloudMsg('✓ All saved bills are in the sheet (it skips any it already had).', 'ok');
+      }, function (err) { cloudMsg(err.message, 'bad'); });
+    });
+
+    $('cloud-disconnect').addEventListener('click', function () {
+      if (!window.confirm('Disconnect the Google Sheet?\n\nBills still waiting to be sent will not be sent. All bills stay saved on this device.')) return;
+      Cloud.disconnect().then(function () { $('cloud-url').value = ''; cloudMsg('Disconnected.', ''); });
+    });
+  }
+
   function init() {
     ['billing', 'bills', 'products'].forEach(function (t) {
       $('tab-' + t).addEventListener('click', function () { showTab(t); });
@@ -101,6 +149,8 @@
 
     Billing.init();
     Bills.init();
+    initCloud();
+    Cloud.init();
     $('shop-name').addEventListener('change', function () {
       var name = $('shop-name').value.trim();
       Billing.setShop(name);

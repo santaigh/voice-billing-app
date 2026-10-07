@@ -64,7 +64,7 @@ function makeEnv(opts) {
   const PropertiesService = { getScriptProperties() { return { getProperty: k => (k in st.props ? st.props[k] : null), setProperty: (k, v) => { st.props[k] = v; } }; } };
   const LockService = { getScriptLock() { return { waitLock() { st.locks.acquired++; }, releaseLock() { st.locks.released++; } }; } };
   const ContentService = {
-    MimeType: { JSON: 'JSON' },
+    MimeType: { JSON: 'JSON', JAVASCRIPT: 'JAVASCRIPT' },
     createTextOutput(text) { return { text, mime: null, setMimeType(m) { this.mime = m; return this; }, getContent() { return this.text; } }; }
   };
   const Utilities = {
@@ -84,7 +84,8 @@ function load(env, folderId) {
   return {
     sb,
     post: body => JSON.parse(sb.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).getContent()),
-    get: () => JSON.parse(sb.doGet().getContent())
+    get: () => JSON.parse(sb.doGet().getContent()),
+    getRaw: params => sb.doGet({ parameter: params })
   };
 }
 
@@ -273,6 +274,41 @@ t('quantities and units read like the app: 0.25 Kg, 3 Pkt, 12 Pcs, 1.5 Ltr', () 
   app.post({ key, action: 'bill', bill: bill('07102026-001', '2026-10-07', 1, [
     item('A', '', 'KG', 0.25, 4), item('B', '', 'PKT', 3, 1), item('C', '', 'PCS', 12, 1), item('D', '', 'LTR', 1.5, 1), item('E', '', 'gm', 1, 1)]) });
   assert.deepStrictEqual([2, 3, 4, 5, 6].map(r => items.cells[r + ',5'].value), ['0.25 Kg', '3 Pkt', '12 Pcs', '1.5 Ltr', '1 GM']);
+});
+
+// ---------------------------------------------------------------- GET (read-only JSONP, used when the page cannot read a POST reply)
+const unwrap = (out, cb) => { const m = new RegExp('^' + cb + '\\((.*)\\);$').exec(out.getContent()); assert.ok(m, 'wrapped in the callback: ' + out.getContent()); assert.strictEqual(out.mime, 'JAVASCRIPT'); return JSON.parse(m[1]); };
+
+t('GET ping with the key answers as JSONP; without a valid key it only refuses', () => {
+  const { app, key, ss } = ready();
+  assert.deepStrictEqual(unwrap(app.getRaw({ action: 'ping', key, callback: 'cb1' }), 'cb1'), { ok: true, url: ss.getUrl(), bills: 0 });
+  assert.deepStrictEqual(unwrap(app.getRaw({ action: 'ping', key: 'nope', callback: 'cb1' }), 'cb1'), { ok: false, error: 'bad key' });
+  assert.deepStrictEqual(unwrap(app.getRaw({ action: 'ping', callback: 'cb1' }), 'cb1'), { ok: false, error: 'bad key' });
+});
+
+t('GET has says which Bill IDs are already in the sheet (read only, at most 50 asked at once)', () => {
+  const { env, app, key, bills } = ready();
+  app.post({ key, action: 'bill', bill: bill('07102026-001', '2026-10-07', 84, [MAIDA]) });
+  app.post({ key, action: 'bill', bill: bill('07102026-002', '2026-10-07', 20) });
+  const rows = bills.getLastRow();
+  const r = unwrap(app.getRaw({ action: 'has', key, ids: '07102026-001,07102026-002,07102026-003', callback: 'f' }), 'f');
+  assert.deepStrictEqual(r, { ok: true, has: { '07102026-001': true, '07102026-002': true, '07102026-003': false } });
+  assert.deepStrictEqual(unwrap(app.getRaw({ action: 'has', key, ids: '', callback: 'f' }), 'f'), { ok: true, has: {} });
+  const many = Array.from({ length: 80 }, (_, i) => 'x' + i).join(',');
+  assert.strictEqual(Object.keys(unwrap(app.getRaw({ action: 'has', key, ids: many, callback: 'f' }), 'f').has).length, 50);
+  assert.strictEqual(bills.getLastRow(), rows, 'reading changed nothing'); assert.strictEqual(env.st.locks.acquired, 2, 'only the two writes took the lock');
+});
+
+t('GET: a callback that is not a plain function name is ignored; unknown actions and a missing setup are refused', () => {
+  const { app, key } = ready();
+  for (const evil of ['alert(1);//', 'a.b', '1abc', 'x y', '']) {
+    const out = app.getRaw({ action: 'ping', key, callback: evil });
+    assert.strictEqual(out.mime, 'JSON', 'plain JSON for callback ' + JSON.stringify(evil)); assert.strictEqual(JSON.parse(out.getContent()).ok, true);
+  }
+  assert.deepStrictEqual(unwrap(app.getRaw({ action: 'drop', key, callback: 'f' }), 'f'), { ok: false, error: 'unknown action' });
+  const env2 = makeEnv(), app2 = load(env2, 'folder123');
+  assert.match(unwrap(app2.getRaw({ action: 'ping', key: 'k', callback: 'f' }), 'f').error, /not set up/);
+  assert.deepStrictEqual(app.get(), { ok: true, service: 'shop-billing-sync' });          // no action: just "deployed"
 });
 
 // ---------------------------------------------------------------- locking

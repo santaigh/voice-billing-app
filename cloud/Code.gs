@@ -79,9 +79,52 @@ function heading(sheet, names, widths) {
 
 // ---------------------------------------------------------------- web app
 
-// Opening the web address in a browser just shows that it is deployed. No data is returned.
-function doGet() {
-  return json({ ok: true, service: 'shop-billing-sync' });
+// Opening the web address in a browser just shows that it is deployed; no data is returned.
+// With a valid key it can also answer two READ-ONLY questions, as JSONP (a <script> tag, which browsers allow across
+// sites). The app uses this only when the browser will not let it read the reply to a POST:
+//   ?action=ping&key=K&callback=f            -> f({"ok":true,"url":...,"bills":N})
+//   ?action=has&ids=a,b,c&key=K&callback=f   -> f({"ok":true,"has":{"a":true,"b":false,...}})
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (!p.action) return json({ ok: true, service: 'shop-billing-sync' });
+  var out;
+  try { out = answer(p); } catch (err) { out = { ok: false, error: 'bad request' }; }
+  return jsonp(out, p.callback);
+}
+
+function answer(p) {
+  var denied = authorize(p.key);
+  if (denied) return denied;
+  var ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+  var sheets = prepareSheets(ss);
+  if (p.action === 'ping') return { ok: true, url: ss.getUrl(), bills: Math.max(0, sheets.bills.getLastRow() - 1) };
+  if (p.action === 'has') {
+    var wanted = String(p.ids || '').split(',').filter(function (x) { return x; }).slice(0, 50);
+    var last = sheets.bills.getLastRow();
+    var have = {};
+    (last > 1 ? sheets.bills.getRange(2, 3, last - 1, 1).getDisplayValues() : []).forEach(function (r) { have[r[0]] = true; });
+    var has = {};
+    wanted.forEach(function (id) { has[id] = !!have[id]; });
+    return { ok: true, has: has };
+  }
+  return { ok: false, error: 'unknown action' };
+}
+
+// null when the key is right, else the refusal to send back
+function authorize(key) {
+  var props = PropertiesService.getScriptProperties();
+  var real = props.getProperty('KEY');
+  if (!real || !props.getProperty('SHEET_ID')) return { ok: false, error: 'not set up: run setup() in the script first' };
+  if (typeof key !== 'string' || !sameText(key, real)) return { ok: false, error: 'bad key' };
+  return null;
+}
+
+// JSONP only for a plain function name, so nothing else can be injected into the page that loads it
+function jsonp(obj, callback) {
+  if (typeof callback === 'string' && /^[A-Za-z_$][\w$]*$/.test(callback)) {
+    return ContentService.createTextOutput(callback + '(' + JSON.stringify(obj) + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return json(obj);
 }
 
 function doPost(e) {
@@ -101,10 +144,9 @@ function json(obj) {
 }
 
 function handle(body) {
-  var props = PropertiesService.getScriptProperties();
-  var key = props.getProperty('KEY'), id = props.getProperty('SHEET_ID');
-  if (!key || !id) return { ok: false, error: 'not set up: run setup() in the script first' };
-  if (!body || typeof body.key !== 'string' || !sameText(body.key, key)) return { ok: false, error: 'bad key' };
+  var denied = authorize(body && body.key);
+  if (denied) return denied;
+  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);                                      // two phones billing at once must not interleave

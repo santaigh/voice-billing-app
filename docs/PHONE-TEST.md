@@ -49,5 +49,15 @@ Write down anything that does not match and send it back.
       the bill numbers and totals, sheet **Bill items** has every item. Dates read `07-10-2026`.
 - [ ] Next day: the Bills tab shows an orange dot and a warning until yesterday's bills are exported.
 
+## 7. Google Sheet
+- [ ] Follow `cloud/SETUP.md` (once, ideally on the PC). Products tab → Google Sheet → **Save & test** shows **✓ Connected**
+      (note whether it says *normal* or *blind mode*) → **Send all existing bills**.
+- [ ] Confirm a bill on the phone. Within a few seconds a row appears in the sheet's **Bills** tab, and the Bills tab in the app says
+      `✓ Google Sheet is up to date`.
+- [ ] In the sheet, click the **Bill ID**: you land on that bill's rows in **Bill items**; click **↑ Bills** to come back.
+- [ ] Turn on **airplane mode**, confirm a bill: billing works as normal and the Bills tab shows `⏳ 1 bill waiting`. Turn it off:
+      the bill appears in the sheet by itself, **once**.
+- [ ] Note anything odd: a wrong date or number format, a missing row, a duplicate, a message you did not understand.
+
 ## What to send back
-Printer model · anything cut off or garbled on the receipt · voice misses (said vs heard) · anything confusing.
+Printer model · normal or blind mode · anything cut off or garbled on the receipt · voice misses (said vs heard) · anything confusing.

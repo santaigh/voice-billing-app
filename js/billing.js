@@ -234,6 +234,7 @@
       lastReceipt = receiptFromBill(bill);
       cart = []; render(); hideUndo();
       showSaved(bill);                                          // saved and closed: ready for the next customer; printing is a separate step
+      if (window.Cloud) Cloud.kick();                           // background: send it to the Google Sheet if connected; never blocks or fails billing
     }).catch(function () {
       $('bill-msg').hidden = false;
       $('bill-msg').className = 'status bad';

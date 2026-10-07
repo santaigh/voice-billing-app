@@ -207,8 +207,29 @@
 
   function closeView() { $('view-overlay').hidden = true; viewing = null; }
 
+  // ---- Google Sheet status line ----
+  function paintCloud(s) {
+    var line = $('cloud-line');
+    line.hidden = !s.connected;
+    if (!s.connected) return;
+    var text, now = true;
+    function n(c, w) { return c + ' ' + w + (c === 1 ? '' : 's'); }
+    if (s.busy) { text = '⟳ Sending to the Google Sheet…'; now = false; }
+    else if (s.error) text = '⚠ ' + s.error + (s.retrying ? ' (' + n(s.pending, 'bill') + ' waiting)' : '');
+    else if (s.failed) text = '⚠ ' + n(s.failed, 'bill') + ' could not be sent: ' + s.firstFailure;
+    else if (s.pending) text = '⏳ ' + n(s.pending, 'bill') + ' waiting to send';
+    else { text = '✓ Google Sheet is up to date'; now = false; }
+    $('cloud-text').textContent = text;
+    $('cloud-now').hidden = !now;
+    var open = $('cloud-open');
+    open.hidden = !s.sheetUrl;
+    if (s.sheetUrl) open.href = s.sheetUrl;
+  }
+
   function init() {
     var today = Bill.localDate(new Date());
+    Cloud.onChange(paintCloud); paintCloud(Cloud.status());
+    $('cloud-now').addEventListener('click', function () { Cloud.syncNow(); });
     setRange(today, today);
     $('view-close').addEventListener('click', closeView);
     $('view-print').addEventListener('click', function () { if (viewing) Billing.printBill(viewing); });

@@ -178,3 +178,18 @@ button.wide { width: 100%; }
 .toast.confirm { background: #8a5a00; }
 .toast.saved { background: #1f6f4a; }
 .toast-btn { flex: none; min-height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: rgba(255,255,255,.2); color: #fff; font: inherit; font-weight: 700; }
+
+/* ---- Google Sheet ---- */
+.cloudbox { margin: 16px 0; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 6px; }
+.cloudbox h2 { margin: 0; font-size: 1.05rem; }
+.cloudbox h2 small { color: var(--muted); font-weight: 400; }
+.cloudbox label { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+.cloudbox input { font: inherit; min-height: 48px; padding: 0 10px; border: 1px solid #b9c2bc; border-radius: 8px; background: #fff; color: var(--ink); width: 100%; }
+.cloud-conn { margin: 0; color: var(--muted); }
+.cloud-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.cloud-actions .primary, .cloud-actions .secondary { min-height: 44px; padding: 0 14px; }
+.cloud-actions button:disabled { opacity: .5; }
+.cloud-sheet { margin: 0; }
+.cloudline { margin: 6px 0 0; padding: 6px 10px; border-radius: 8px; background: var(--card); font-size: .9rem; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.cloudline .linkbtn { padding: 4px 6px; }
+.cloudline a { color: var(--green); }
