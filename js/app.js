@@ -1,0 +1,108 @@
+/* Screens: tab switching and the Products screen. */
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function el(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt !== undefined) e.textContent = txt; // textContent only: sheet data is never parsed as HTML
+    return e;
+  }
+
+  // ---- tabs ----
+  function showTab(name) {
+    ['billing', 'bills', 'products'].forEach(function (t) {
+      $('screen-' + t).hidden = t !== name;
+      var b = $('tab-' + t);
+      b.setAttribute('aria-selected', t === name ? 'true' : 'false');
+    });
+    try { sessionStorage.setItem('tab', name); } catch (e) { /* private mode: fine */ }
+  }
+
+  // ---- products screen ----
+  function renderProducts(products, info) {
+    $('prod-summary').textContent = products.length
+      ? products.length + (products.length === 1 ? ' product' : ' products') + (info ? ' · ' + info.fileName + ' · ' + new Date(info.loadedAt).toLocaleString() : '')
+      : 'No products loaded yet.';
+    $('prod-empty').hidden = products.length > 0;
+
+    var body = $('prod-body');
+    body.textContent = '';
+    products.forEach(function (p) {
+      var tr = el('tr');
+      var name = el('td', 'name');
+      name.appendChild(el('div', '', p.name_en));
+      if (p.name_ta) name.appendChild(el('div', 'ta', p.name_ta));
+      tr.appendChild(name);
+      tr.appendChild(el('td', 'unit', p.unit));
+      tr.appendChild(el('td', 'price', p.price.toFixed(2)));
+      body.appendChild(tr);
+    });
+    $('prod-table').hidden = products.length === 0;
+  }
+
+  function renderErrors(errors) {
+    var box = $('prod-errors');
+    box.textContent = '';
+    box.hidden = errors.length === 0;
+    if (!errors.length) return;
+    box.appendChild(el('strong', '', errors.length + ' row' + (errors.length > 1 ? 's' : '') + ' skipped'));
+    var ul = el('ul');
+    errors.forEach(function (e) {
+      ul.appendChild(el('li', '', 'Row ' + e.row + (e.code ? ' (' + e.code + ')' : '') + ': ' + e.message));
+    });
+    box.appendChild(ul);
+  }
+
+  function status(msg, kind) {
+    var s = $('prod-status');
+    s.textContent = msg;
+    s.className = 'status ' + (kind || '');
+    s.hidden = !msg;
+  }
+
+  function onFile(file) {
+    if (!file) return;
+    status('Reading ' + file.name + '…');
+    file.arrayBuffer().then(function (buf) {
+      var result = Catalog.parseWorkbook(window.XLSX, buf);
+      renderErrors(result.errors);
+      if (!result.products.length) {
+        status('No valid products in ' + file.name + '. Your previous list was kept.', 'bad');
+        return;
+      }
+      var info = { fileName: file.name, loadedAt: Date.now() };
+      return Store.saveProducts(result.products, info).then(function () {
+        renderProducts(result.products, info);
+        status('Loaded ' + result.products.length + (result.products.length === 1 ? ' product' : ' products') +
+          (result.errors.length ? ', skipped ' + result.errors.length + '.' : '.'), result.errors.length ? 'warn' : 'ok');
+      });
+    }).catch(function (err) {
+      renderErrors([]);
+      status(err.message + ' Your previous list was kept.', 'bad');
+    }).then(function () { $('prod-file').value = ''; });
+  }
+
+  function init() {
+    ['billing', 'bills', 'products'].forEach(function (t) {
+      $('tab-' + t).addEventListener('click', function () { showTab(t); });
+    });
+    $('prod-load').addEventListener('click', function () { $('prod-file').click(); });
+    $('prod-file').addEventListener('change', function (e) { onFile(e.target.files[0]); });
+
+    var start = 'products';
+    try { start = sessionStorage.getItem('tab') || start; } catch (e) { /* ignore */ }
+    showTab(start);
+
+    Store.loadProducts().then(function (r) { renderProducts(r.products, r.info); })
+      .catch(function () { status('Could not open the on-device storage. Products will not be remembered.', 'bad'); });
+
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* app still works online */ });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();

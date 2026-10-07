@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f6f4a">
+  <title>Voice Billing</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="top"><h1>Voice Billing</h1></header>
+
+  <main>
+    <section id="screen-billing" hidden>
+      <p class="placeholder">Billing screen — coming in step 2.</p>
+    </section>
+
+    <section id="screen-bills" hidden>
+      <p class="placeholder">Bills list and Excel export — coming in step 4.</p>
+    </section>
+
+    <section id="screen-products" hidden>
+      <div class="bar">
+        <button id="prod-load" class="primary" type="button">Load products.xlsx</button>
+        <input id="prod-file" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      </div>
+      <p id="prod-summary" class="summary">No products loaded yet.</p>
+      <p id="prod-status" class="status" role="status" hidden></p>
+      <div id="prod-errors" class="errors" hidden></div>
+      <p id="prod-empty" class="placeholder">
+        Tap <b>Load products.xlsx</b> and pick your sheet.<br>
+        Columns: <code>code · name_en · name_ta · unit · price · aliases</code>
+      </p>
+      <table id="prod-table" hidden>
+        <thead><tr><th>Product</th><th>Unit</th><th class="price">Price ₹</th></tr></thead>
+        <tbody id="prod-body"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <nav class="tabs" role="tablist">
+    <button id="tab-billing" role="tab" type="button">Billing</button>
+    <button id="tab-bills" role="tab" type="button">Bills</button>
+    <button id="tab-products" role="tab" type="button">Products</button>
+  </nav>
+
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="js/catalog.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

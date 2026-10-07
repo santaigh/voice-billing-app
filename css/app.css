@@ -1,0 +1,37 @@
+:root {
+  --green: #1f6f4a; --green-dark: #17543a; --bg: #f6f7f5; --card: #fff; --ink: #1d2320;
+  --muted: #5f6b65; --line: #dfe4e0; --bad: #a32020; --bad-bg: #fdecec; --warn-bg: #fff6df; --ok-bg: #e5f4ec;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Tamil", sans-serif;
+  background: var(--bg); color: var(--ink);
+  padding-bottom: 72px; /* room for the tab bar */
+}
+.top { background: var(--green); color: #fff; padding: 12px 16px; position: sticky; top: 0; z-index: 2; }
+.top h1 { margin: 0; font-size: 1.2rem; }
+main { max-width: 720px; margin: 0 auto; padding: 12px 16px; }
+[hidden] { display: none !important; }
+
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line); z-index: 2; }
+.tabs button { flex: 1; min-height: 56px; border: 0; background: none; font: inherit; font-weight: 600; color: var(--muted); }
+.tabs button[aria-selected="true"] { color: var(--green); box-shadow: inset 0 3px 0 var(--green); }
+
+button.primary { min-height: 48px; padding: 0 20px; border: 0; border-radius: 8px; background: var(--green); color: #fff; font: inherit; font-weight: 600; }
+button.primary:active { background: var(--green-dark); }
+.bar { margin-bottom: 8px; }
+.summary { color: var(--muted); margin: 8px 0; }
+.placeholder { color: var(--muted); text-align: center; padding: 24px 8px; }
+code { background: #e9ede9; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+
+.status { padding: 10px 12px; border-radius: 8px; margin: 8px 0; background: var(--card); }
+.status.ok { background: var(--ok-bg); } .status.warn { background: var(--warn-bg); } .status.bad { background: var(--bad-bg); color: var(--bad); }
+.errors { background: var(--warn-bg); border-radius: 8px; padding: 10px 12px; margin: 8px 0; max-height: 40vh; overflow: auto; }
+.errors ul { margin: 6px 0 0; padding-left: 20px; }
+
+table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { background: #eef1ee; font-size: .85rem; color: var(--muted); }
+td.unit { color: var(--muted); font-size: .9rem; } th.price, td.price { text-align: right; font-variant-numeric: tabular-nums; }
+td.name .ta { color: var(--muted); font-size: .9rem; }
