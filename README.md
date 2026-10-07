@@ -7,6 +7,13 @@ its price, and a bill is printed on a 58mm thermal printer. Android Chrome is th
 **Status:** built and published with GitHub Pages, ready for a phone test (see
 [docs/PHONE-TEST.md](docs/PHONE-TEST.md)). Live hands-free voice billing was added after the five planned steps.
 
+## Google Sheet sync (in progress)
+
+`cloud/` holds a Google Apps Script that writes every confirmed bill into one Google Sheet in your Drive folder
+(tab **Bills**: `Sl No · Date · Bill ID · Grand Total`, Bill ID links to tab **Bill items**). **Step A is done** — the script,
+its tests and the setup guide ([cloud/SETUP.md](cloud/SETUP.md)). The app does not send bills to it yet (step B).
+Your Drive folder ID is typed into the script by you and is never committed to this public repo.
+
 ## Publishing
 
 `.github/workflows/pages.yml` runs the unit tests and then publishes the app files (not `test/` or `tools/`) to
