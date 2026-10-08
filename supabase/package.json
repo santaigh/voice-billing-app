@@ -1,0 +1,12 @@
+{
+  "name": "shop-billing-supabase",
+  "private": true,
+  "description": "Schema, security rules and tests for the shop billing backend (run locally with PGlite)",
+  "scripts": {
+    "test": "node tests/run-local.cjs && node tests/create-user.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.0"
+  },
+  "type": "module"
+}
