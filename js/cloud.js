@@ -25,6 +25,26 @@
     return out;
   }
 
+  // The same rules the script applies (check() in cloud/Code.gs), run here first, so a bill the sheet would refuse is
+  // named with its exact problem instead of the blind-mode "did not accept". '' when the bill is fine.
+  function problemWith(p) {
+    function num(v) { return typeof v === 'number' && isFinite(v); }
+    if (!/^\d{8}-\d{3,}$/.test(p.id)) return 'bad bill id (' + p.id + ')';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date || '')) return 'bad date (' + p.date + ')';
+    if (p.id.slice(0, 8) !== p.date.slice(8, 10) + p.date.slice(5, 7) + p.date.slice(0, 4)) return 'bill number ' + p.id + ' does not match its date ' + p.date;
+    if (!num(p.total) || p.total < 0) return 'bad total (' + p.total + ')';
+    var items = p.items || [];
+    if (items.length > 500) return 'more than 500 items';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i], n = 'item ' + (i + 1) + ' ';
+      if (typeof it.name_en !== 'string' || !it.name_en) return n + 'has no English name';
+      if (!num(it.qty) || !(it.qty > 0)) return n + '(' + it.name_en + ') has quantity ' + it.qty;
+      if (!num(it.price) || it.price < 0) return n + '(' + it.name_en + ') has price ' + it.price;
+      if (!num(it.amount) || it.amount < 0) return n + '(' + it.name_en + ') has amount ' + it.amount;
+    }
+    return '';
+  }
+
   // wait before retry number `tries` (1, 2, 3 ...): 30 s, 2 min, 10 min, then every 15 min
   function delayFor(tries) { return cfg.backoff[Math.min(Math.max(tries, 1), cfg.backoff.length) - 1]; }
 
@@ -45,7 +65,7 @@
     return text || 'Google did not accept the request.';
   }
 
-  var api = { wirePayload: wirePayload, delayFor: delayFor, validUrl: validUrl, friendly: friendly, settings: cfg };
+  var api = { wirePayload: wirePayload, problemWith: problemWith, delayFor: delayFor, validUrl: validUrl, friendly: friendly, settings: cfg };
   if (typeof window === 'undefined') { if (typeof module !== 'undefined' && module.exports) module.exports = api; return; }
 
   // ---------------------------------------------------------------- transport (browser only)
@@ -162,7 +182,11 @@
     function sendChunks(todo) {
       if (!todo.length) return Promise.resolve();
       var chunk = todo.slice(0, cfg.batch), rest = todo.slice(cfg.batch);
-      return ask(st.conf, { action: 'bills', bills: chunk.map(wirePayload) }).then(function (reply) {
+      var bad = [];                                                          // refused here, before sending, with the reason
+      chunk = chunk.filter(function (b) { var why = problemWith(wirePayload(b)); if (why) bad.push([b.billNo, 'Bill ' + Bill.label(b) + ': ' + why]); return !why; });
+      var markBad = bad.reduce(function (p, x) { return p.then(function () { return Store.patchOutbox([x[0]], { error: x[1] }); }); }, Promise.resolve());
+      if (!chunk.length) return markBad.then(refresh).then(emit).then(function () { return sendChunks(rest); });
+      return markBad.then(function () { return ask(st.conf, { action: 'bills', bills: chunk.map(wirePayload) }); }).then(function (reply) {
         if (!reply || !reply.ok) throw fail('script', friendly(reply && reply.error), false);
         var sent = [], refused = [];
         chunk.forEach(function (b, i) {
