@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f6e4a">
+  <title>Shop Billing</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header id="bar" class="bar" hidden>
+    <div class="who"><strong id="who-name"></strong><span id="who-detail"></span></div>
+    <button id="signout" class="linkbtn" type="button">Sign out</button>
+  </header>
+
+  <main>
+    <section id="screen-login" class="card" hidden>
+      <h1>Shop Billing</h1>
+      <form id="login-form" novalidate>
+        <label for="login-id">Email or mobile number</label>
+        <input id="login-id" type="text" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false">
+        <label for="login-pw">Password</label>
+        <input id="login-pw" type="password" autocomplete="current-password">
+        <button id="login-go" class="primary" type="submit">Sign in</button>
+        <p id="login-msg" class="msg bad" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section id="screen-password" class="card" hidden>
+      <h1>Choose your own password</h1>
+      <p class="hint">You are using a password someone else set. Choose one only you know.</p>
+      <form id="pw-form" novalidate>
+        <label for="pw-new">New password</label>
+        <input id="pw-new" type="password" autocomplete="new-password">
+        <label for="pw-again">New password again</label>
+        <input id="pw-again" type="password" autocomplete="new-password">
+        <button id="pw-go" class="primary" type="submit">Save password</button>
+        <p id="pw-msg" class="msg bad" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section id="screen-blocked" class="card" hidden>
+      <h1 id="blocked-title"></h1>
+      <p id="blocked-text"></p>
+      <button id="blocked-retry" class="secondary" type="button" hidden>Try again</button>
+    </section>
+
+    <section id="screen-counters" class="card" hidden>
+      <h1>Pick your counter</h1>
+      <p id="counters-shop" class="hint"></p>
+      <div id="counters-list" class="counters"></div>
+      <p id="counters-empty" class="hint" hidden>This shop has no counters yet. Ask the shop owner or the platform admin to add one.</p>
+      <p id="counters-msg" class="msg bad" role="alert" hidden></p>
+    </section>
+
+    <section id="screen-shop" class="card" hidden>
+      <h1 id="shop-title"></h1>
+      <p id="shop-counter" class="big"></p>
+      <p class="hint">The billing screen arrives in the next phase. Your sign-in, shop and counter are all working.</p>
+      <button id="change-counter" class="secondary" type="button">Change counter</button>
+      <button id="manage-open" class="secondary" type="button" hidden>Manage this shop</button>
+    </section>
+
+    <section id="screen-shops" class="card" hidden>
+      <h1>Shops</h1>
+      <div id="shops-list" class="rows"></div>
+      <p id="shops-empty" class="hint" hidden>No shops yet.</p>
+      <button id="shop-add" class="secondary" type="button" hidden>Add a shop</button>
+      <h2 id="staff-title" hidden>Platform staff</h2>
+      <div id="staff-list" class="rows"></div>
+      <button id="staff-add" class="secondary" type="button" hidden>Add platform staff</button>
+      <p id="shops-msg" class="msg bad" role="alert" hidden></p>
+    </section>
+
+    <section id="screen-manage" class="card" hidden>
+      <button id="manage-back" class="linkbtn back" type="button">&larr; Back</button>
+      <h1 id="manage-title"></h1>
+      <h2>Counters</h2>
+      <div id="counters-admin" class="rows"></div>
+      <button id="counter-add" class="secondary" type="button" hidden>Add a counter</button>
+      <h2 id="people-title">People</h2>
+      <div id="people-list" class="rows"></div>
+      <button id="person-add" class="secondary" type="button" hidden>Add a person</button>
+      <p id="manage-msg" class="msg bad" role="alert" hidden></p>
+    </section>
+  </main>
+
+  <div id="dlg" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+    <form id="dlg-form" class="dialog" novalidate>
+      <h2 id="dlg-title"></h2>
+      <div id="dlg-fields"></div>
+      <p id="dlg-msg" class="msg bad" role="alert" hidden></p>
+      <div class="dlg-actions">
+        <button id="dlg-go" class="primary" type="submit"></button>
+        <button id="dlg-cancel" class="secondary" type="button">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="vendor/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

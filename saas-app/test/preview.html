@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop Billing (preview with a pretend database)</title>
+  <link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+  <!-- Takes the real page's markup from ../index.html, so the two can never drift, and signs in against test/stub.js instead of Supabase.
+       For looking at the screens only. ?as=owner | owner-new | cashier | inactive | noprofile | platform | nocounters -->
+  <script>
+    (function () {
+      function load(src) { return new Promise(function (ok) { var s = document.createElement('script'); s.src = src; s.onload = ok; document.body.appendChild(s); }); }
+      fetch('../index.html').then(function (r) { return r.text(); }).then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        ['header', 'main', '#dlg'].forEach(function (sel) { document.body.appendChild(document.importNode(doc.querySelector(sel), true)); });
+        return load('../vendor/supabase.min.js');
+      }).then(function () { return load('../js/config.js'); })
+        .then(function () { return load('stub.js'); })
+        .then(function () { return load('../js/logic.js'); })
+        .then(function () { return load('../js/app.js'); })
+        .then(function () { return load('../js/admin.js'); })
+        .then(function () { document.dispatchEvent(new Event('DOMContentLoaded')); });
+    })();
+  </script>
+</body>
+</html>
