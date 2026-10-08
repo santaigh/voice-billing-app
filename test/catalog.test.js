@@ -55,4 +55,29 @@ t('empty sheet and non-Excel bytes are clear errors', () => {
   assert.throws(() => Catalog.parseWorkbook(XLSX, new Uint8Array([1, 2, 3]).buffer), /could not be read|no product rows|Missing/);
 });
 
+
+// ---- published Google Sheet (CSV) ----
+const CSV = ['﻿code,name_en,name_ta,unit,price,aliases',
+  '001,Sugar,சர்க்கரை,kg,48,"sakkarai, cheeni"',
+  'P002,Maida,மைதா,KG,42,',
+  'P003,,Bad row,KG,10,',
+  'P004,Oil,எண்ணெய்,ltr,"1,250.50",'].join('\r\n');
+
+t('csv: same rules as Excel, Tamil kept, quoted aliases and prices, a leading BOM ignored, bad rows reported', () => {
+  const r = Catalog.parseCsv(XLSX, CSV);
+  assert.deepStrictEqual(r.products.map(p => p.code), ['001', 'P002', 'P004']);   // 001 keeps its zeros
+  assert.strictEqual(r.products[0].name_ta, 'சர்க்கரை');
+  assert.strictEqual(r.products[0].unit, 'KG');
+  assert.deepStrictEqual(r.products[0].aliases, ['sakkarai', 'cheeni']);
+  assert.strictEqual(r.products[2].price, 1250.5);
+  assert.deepStrictEqual(r.errors.map(e => e.row), [4]);
+});
+
+t('csv: a web page, an empty reply or missing columns are refused with a clear message', () => {
+  assert.throws(() => Catalog.parseCsv(XLSX, '<!DOCTYPE html><html><body>Sign in</body></html>'), /did not return a sheet/);
+  assert.throws(() => Catalog.parseCsv(XLSX, '   '), /came back empty/);
+  assert.throws(() => Catalog.parseCsv(XLSX, 'a,b\n1,2'), /Missing column/);
+  assert.throws(() => Catalog.parseCsv(XLSX, 'code,name_en,price'), /no product rows/);
+});
+
 console.log(n + ' tests passed');

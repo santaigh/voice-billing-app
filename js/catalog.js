@@ -54,7 +54,11 @@
     try { wb = XLSX.read(buffer, { type: 'array' }); }
     catch (e) { throw new Error('This file could not be read as an Excel sheet.'); }
     if (!wb.SheetNames.length) throw new Error('The workbook has no sheets.');
-    var sheet = wb.Sheets[wb.SheetNames[0]];
+    return fromSheet(XLSX, wb.Sheets[wb.SheetNames[0]]);
+  }
+
+  // first sheet -> rows keyed by normalised header -> checked products. Shared by Excel files and the published CSV.
+  function fromSheet(XLSX, sheet) {
     var rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
     if (!rows.length) throw new Error('The first sheet has no product rows.');
     // normalise header names: "Name_EN " -> "name_en"
@@ -68,7 +72,20 @@
     return validateRows(rows);
   }
 
-  var api = { validateRows: validateRows, parseWorkbook: parseWorkbook, parsePrice: parsePrice };
+  // text of a published Google Sheet CSV -> same result as parseWorkbook. Cells stay text (raw), so a code like 001 keeps
+  // its zeros. A reply that is really a web page (sheet not published, sign-in page) is refused, never half-read.
+  function parseCsv(XLSX, csvText) {
+    var t = String(csvText == null ? '' : csvText).replace(/^\uFEFF/, '');
+    if (!t.trim()) throw new Error('The price list came back empty.');
+    if (/^\s*<(!doctype|html|head|body)/i.test(t)) throw new Error('The price list link did not return a sheet. Check that it is published to the web as CSV.');
+    var wb;
+    try { wb = XLSX.read(t, { type: 'string', raw: true }); }
+    catch (e) { throw new Error('The price list could not be read.'); }
+    if (!wb.SheetNames.length) throw new Error('The price list has no rows.');
+    return fromSheet(XLSX, wb.Sheets[wb.SheetNames[0]]);
+  }
+
+  var api = { validateRows: validateRows, parseWorkbook: parseWorkbook, parseCsv: parseCsv, parsePrice: parsePrice };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Catalog = api;
 })(typeof window !== 'undefined' ? window : this);

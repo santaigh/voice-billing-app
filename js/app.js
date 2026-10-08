@@ -24,7 +24,9 @@
   }
 
   // ---- products screen ----
+  var shown = { count: 0, info: null };
   function renderProducts(products, info) {
+    shown = { count: products.length, info: info };
     $('prod-summary').textContent = products.length
       ? products.length + (products.length === 1 ? ' product' : ' products') + (info ? ' · ' + info.fileName + ' · ' + Bill.formatDateTime(new Date(info.loadedAt)) : '')
       : 'No products loaded yet.';
@@ -67,6 +69,7 @@
 
   function onFile(file) {
     if (!file) return;
+    if (masterUrl() && shown.count && !window.confirm('Loading this file replaces your ' + shown.count + ' products. The shop price list will replace it again the next time the app opens online.\n\nContinue?')) { $('prod-file').value = ''; return; }
     status('Reading ' + file.name + '…');
     file.arrayBuffer().then(function (buf) {
       var result = Catalog.parseWorkbook(window.XLSX, buf);
@@ -86,6 +89,42 @@
       renderErrors([]);
       status(err.message + ' Your previous list was kept.', 'bad');
     }).then(function () { $('prod-file').value = ''; });
+  }
+
+  // ---- the shop's master price list (Google Sheet CSV) ----
+  var masterBusy = false;
+  function masterUrl() { return window.APP_CONFIG && window.APP_CONFIG.MASTER_URL; }
+
+  // the line under the Products heading: where the prices come from and how fresh they are
+  function paintMaster(state) {
+    var when = shown.info && shown.info.fileName === 'Shop price list' ? Bill.formatDateTime(new Date(shown.info.loadedAt)) : '';
+    $('master-line').textContent = state === 'busy' ? 'Checking the shop price list…'
+      : state === 'ok' ? 'Prices from the shop list · updated ' + when
+      : when ? 'Using the saved price list · last updated ' + when + ' (could not reach the shop list)'
+      : 'No price list yet. Connect to the internet once.';
+    $('master-refresh').disabled = state === 'busy';
+    $('prod-empty-master').hidden = !masterUrl();
+    $('prod-empty-file').hidden = !!masterUrl();
+  }
+
+  function refreshMaster() {
+    var url = masterUrl();
+    if (!url || masterBusy) return Promise.resolve();
+    masterBusy = true;
+    paintMaster('busy');
+    return Master.refresh(url).then(function (r) {
+      if (r.skipped) return;
+      if (!r.ok) { paintMaster('old'); status(r.message + ' Using the saved price list.', 'warn'); return; }
+      var info = { fileName: 'Shop price list', loadedAt: Date.now() };
+      return Store.saveProducts(r.products, info).then(function () {
+        renderProducts(r.products, info);
+        renderErrors(r.errors);
+        Billing.setProducts(r.products);
+        paintMaster('ok');
+        status('Prices updated from the shop list' + (r.errors.length ? ', skipped ' + r.errors.length + ' row(s).' : '.'), r.errors.length ? 'warn' : 'ok');
+      });
+    }).catch(function () { paintMaster('old'); status('Could not save the new price list. Using the saved one.', 'warn'); })
+      .then(function () { masterBusy = false; });
   }
 
   // ---- Google Sheet box (Products tab) ----
@@ -141,6 +180,11 @@
       $('tab-' + t).addEventListener('click', function () { showTab(t); });
     });
     $('prod-load').addEventListener('click', function () { $('prod-file').click(); });
+    $('master-box').hidden = !masterUrl();                                   // no link configured: the screen is the old Excel-only one
+    $('excel-alt').classList.toggle('nomaster', !masterUrl());
+    $('excel-alt').open = !masterUrl();
+    $('master-refresh').addEventListener('click', refreshMaster);
+    if (masterUrl()) paintMaster('old');
     $('prod-file').addEventListener('change', function (e) { onFile(e.target.files[0]); });
 
     var start = 'products';
@@ -159,7 +203,9 @@
     Store.getShop().then(function (name) { $('shop-name').value = name; Billing.setShop(name); });
 
     Store.loadProducts().then(function (r) { renderProducts(r.products, r.info); Billing.setProducts(r.products); })
-      .catch(function () { status('Could not open the on-device storage. Products will not be remembered.', 'bad'); });
+      .catch(function () { status('Could not open the on-device storage. Products will not be remembered.', 'bad'); })
+      .then(refreshMaster);                                                  // saved list first (works offline), then the newest from the shop
+    window.addEventListener('online', refreshMaster);
 
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       navigator.serviceWorker.register('sw.js').catch(function () { /* app still works online */ });

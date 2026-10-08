@@ -141,6 +141,26 @@ python -m http.server 8000
 
 then open <http://localhost:8000>. (The microphone later needs `https://` or `localhost`.)
 
+## Master price list (Google Sheet)
+
+One Google Sheet holds the shop's products and prices; every phone follows it, so nobody has to send or load an Excel file.
+
+- **Set up once:** upload `products.xlsx` to Google Drive and open it with **File -> Save as Google Sheets**. Keep row 1 as
+  `code - name_en - name_ta - unit - price - aliases` (the rules are in "Product sheet" below). Then **File -> Share -> Publish to web**,
+  pick the **first sheet** (not "Entire document"), change the format to **Comma-separated values (.csv)**, **Publish**, and copy the link.
+- **Connect the app:** paste that link as `MASTER_URL` in `js/config.js`, commit and push. The link shows only names and
+  prices. Never put the Apps Script KEY or Web app URL in that file: it is public. Leave `MASTER_URL` empty to switch automatic
+  updates off (the app is then Excel-file-only, as before).
+- **What phones do:** each time the app opens, and when the phone comes back online, it fetches the CSV and replaces the saved
+  list. The Products tab says `Prices from the shop list - updated DD-MM-YYYY hh:mm`, has **Refresh now**, and lists any
+  skipped rows. Edit prices in the Google Sheet from then on; a change reaches a phone the next time it opens online (Google can
+  take a few minutes to publish an edit).
+- **A bad reply never wipes the list.** If the phone is offline, the link answers with an error, the reply is a web page
+  (the sheet is not published) or has no valid products or a missing column, the last saved list stays and the Products tab says why.
+- **Bills are not touched.** Saved bills, and items already in the open bill, keep the names and prices they had.
+- **Excel still works** under **Use an Excel file instead**, but while a link is set the shop list replaces a loaded file the
+  next time the app opens online, so the app asks you to confirm first.
+
 ## Product sheet
 
 First sheet of the workbook, header in row 1:
@@ -154,12 +174,13 @@ First sheet of the workbook, header in row 1:
 - A row with a missing field, a non-numeric or zero price, or a repeated `code` is **skipped and
   listed** with its Excel row number; the rest still load. A repeated code keeps the first row.
 - A file with no valid rows, or one that is not an Excel sheet, leaves the previous list untouched.
-- `sample/products.xlsx` has 103 grocery items with made-up prices (rebuild: `python tools/make_sample.py`).
+- `sample/products.xlsx` has 103 grocery items with made-up prices (rebuild: `python tools/make_sample.py`). It is only an example to copy
+  into your own Google Sheet; the app does not load it by itself.
 
 ## Tests
 
 ```
-node test/catalog.test.js && node test/bill.test.js && node test/voice.test.js && node test/export.test.js
+node test/catalog.test.js && node test/master.test.js && node test/bill.test.js && node test/voice.test.js && node test/export.test.js && node test/cloud-script.test.js && node test/cloud-preflight.test.js
 python -m http.server 8000 &                                # then, with playwright installed:
 node test/e2e.js && node test/e2e-billing.js && node test/e2e-voice.js && node test/e2e-bills.js   # headless Chrome (voice uses a fake speech engine)
 ```
